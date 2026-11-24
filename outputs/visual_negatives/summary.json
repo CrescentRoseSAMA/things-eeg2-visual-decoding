@@ -1,0 +1,27 @@
+{
+  "stages": [
+    {
+      "stage": "pilot",
+      "baseline_comparison": {
+        "stage": "pilot",
+        "runs": 2,
+        "query_evaluations": 2000,
+        "candidate_top1_pct": 7.3,
+        "control_top1_pct": 7.4,
+        "delta_top1_pp": -0.1,
+        "candidate_top5_pct": 21.85,
+        "control_top5_pct": 21.65,
+        "delta_top5_pp": 0.2,
+        "passed": false
+      },
+      "top1_hits_delta_vs_random": -1,
+      "neighbor_errors": {
+        "baseline": 526,
+        "random": 527,
+        "near": 526
+      },
+      "passed": false
+    }
+  ],
+  "official_test_used": false
+}

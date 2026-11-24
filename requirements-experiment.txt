@@ -1,0 +1,6 @@
+# Python 3.11, Windows x64. Install the matching torch build first (see README).
+torch==2.0.1
+numpy==1.26.4
+scipy==1.11.4
+matplotlib==3.7.2
+python-docx==1.2.0

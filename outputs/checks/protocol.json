@@ -1,0 +1,67 @@
+{
+  "dataset": "THINGS-EEG2",
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "training_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "primary": "ab",
+  "configurations": [
+    "baseline",
+    "a",
+    "b",
+    "ab"
+  ],
+  "development_split_seed": 2026,
+  "development_subjects": [
+    1,
+    2
+  ],
+  "development_seed": 0,
+  "development_epochs": 100,
+  "development_selection": "Mean Top-1 across all eight curves, ties by mean Top-5 then earliest epoch",
+  "validation_protocol": "200 held-out concepts; 5 support image vectors averaged per concept, 5 separate EEG queries per concept",
+  "formal_score": "Dot product: unit EEG embedding times original unnormalized center_clip templates",
+  "fit_scope": "Development normalization fitted to training concepts; formal normalization fitted to the full official training partition per subject",
+  "upstream_mvnn": "Published preprocessing computes session whitening from the equally weighted training and test covariances",
+  "source_sha256": [
+    {
+      "file": "eeg_model.py",
+      "sha256": "f658767affbb91b92c088cc67fd6634383bc71010f9bb88eedd7cd1f6258447d"
+    },
+    {
+      "file": "eeg_data.py",
+      "sha256": "8a028261a47374eb367374f538ad59f7c163cd52df88dbbf7a9f1bbd4e219887"
+    },
+    {
+      "file": "eeg_train.py",
+      "sha256": "7a196c3aa741afbf2918cb155fdfcaec35e16a84c0a685000a32f13a0af4759f"
+    },
+    {
+      "file": "eeg_evaluate.py",
+      "sha256": "7e4f0b0fcef372e2e3f5eb951b9eafc926385857e6949c75bfbc9762a1528073"
+    },
+    {
+      "file": "experiment_environment.json",
+      "sha256": "e01111ecfc948ca7a4c5efaf1dab5ea31f4f3a396f0ab9f163b19e825c571d33"
+    },
+    {
+      "file": "data\\THINGS-EEG2\\derived\\sample_index.csv",
+      "sha256": "926527a082ef7095941649f70ab9a02e1ce635640aecda0675d73eebce993e19"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "model": "ab_pool4",
+  "batch": 128,
+  "epochs": 100,
+  "adam_lr": 0.0002,
+  "temperature": 0.07,
+  "extra": "16 distinct different classes, one outside-batch image per class, EEG-to-image only",
+  "near": "sample from 20 nearest eligible training class centroids by cosine",
+  "random": "uniform over all eligible different training classes; same number of negatives",
+  "schedule": "independent epoch RNG, class draws shared by class per epoch, image drawn per anchor",
+  "endpoint": "epoch 100, original scoring",
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "gate": "near vs baseline passes stage's usual gate AND aggregate near Top1 hits > random AND near has fewer wrong Top1 predictions into the true class's 20 nearest templates than random",
+  "replication_split": "fresh development classes, split seed 2027, all three arms fit from scratch",
+  "formal_test_used": false
+}

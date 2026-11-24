@@ -1,0 +1,15 @@
+{
+  "model": "ab_pool4",
+  "control": "ab_pool4 with symmetric image InfoNCE",
+  "optimizer": "Adam",
+  "learning_rate": 0.0002,
+  "epochs": 100,
+  "batch": 128,
+  "temperature": 0.07,
+  "loss": "0.75 image InfoNCE + 0.25 training class CE; own mean excludes paired image",
+  "centers": "mean of unit training CLIP features, without renormalizing class means",
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "formal": "only after both gates pass; all 10 subjects x seeds 0..4 fit before official test",
+  "selection": "fixed epoch 100; paired identical queries; reused official test set"
+}

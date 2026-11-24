@@ -1,0 +1,7 @@
+subject,seed,arm,top1_hits,top5_hits,errors,neighbor_errors,other_errors
+1,0,baseline,78,218,922,250,672
+1,0,random,78,218,922,250,672
+1,0,near,74,220,926,253,673
+2,0,baseline,70,215,930,276,654
+2,0,random,69,217,931,277,654
+2,0,near,72,217,928,273,655

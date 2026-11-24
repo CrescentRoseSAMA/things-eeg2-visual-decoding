@@ -1,0 +1,14 @@
+{
+  "subjects": [
+    1,
+    2
+  ],
+  "seed": 0,
+  "epochs": 100,
+  "batch_size": 128,
+  "controls": "ab, existing development checkpoints",
+  "comparison": "ab_pool4 minus ab on identical 1000 validation queries; direct scores from epoch 100",
+  "candidate_for_replication": "Positive Top-1 difference on both subjects and positive mean Top-5 difference",
+  "split": "official training partition only",
+  "score": "unit EEG dot development class center"
+}

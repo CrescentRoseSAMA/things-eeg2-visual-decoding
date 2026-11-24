@@ -1,0 +1,27 @@
+{
+  "split": "development",
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "widths": [
+    8,
+    1
+  ],
+  "input_hz": 100,
+  "alpha": 0.1,
+  "fixed_split_seed": 2026,
+  "score": "L2-normalized predicted centered CLIP feature dot original development template",
+  "target": "training image vector minus training image-vector mean",
+  "comparison": "full80 minus pooled10 in percentage points, paired by subject",
+  "primary": "10-subject mean Top-1 difference",
+  "secondary": "mean Top-5 difference"
+}

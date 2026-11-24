@@ -1,0 +1,18 @@
+{
+  "training": {
+    "os": "Windows x64, build 26200",
+    "python": "3.11.2 (Anaconda x64)",
+    "torch": "2.0.1+cu118",
+    "torch_cuda": "11.8",
+    "torch_cudnn": 8700,
+    "numpy": "1.26.4",
+    "matplotlib": "3.7.2",
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "gpu_memory_mib": 4096,
+    "nvidia_driver": "595.97",
+    "cpu": "12th Gen Intel Core i5-12500H",
+    "logical_processors": 16
+  },
+  "report_dependency": "python-docx==1.2.0",
+  "public_archive_downloader_python": ">=3.11 (stdlib hashlib.file_digest)"
+}

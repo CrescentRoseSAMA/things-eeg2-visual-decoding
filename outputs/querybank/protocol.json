@@ -1,0 +1,15 @@
+{
+  "model": "ab_pool4",
+  "checkpoint": "development epoch 100",
+  "calibration": "14540 development training EEGs",
+  "measure": "Spearman correlation across 200 templates: training top-1 counts vs validation false top-1 counts",
+  "diagnostic_pilot": "both rho >= 0.30",
+  "diagnostic_replication": ">=6/8 subject-mean rho >=0.30, each seed mean rho >=0.30",
+  "concentration": "fraction of validation errors in top 20 training templates, ties by class index",
+  "adjustment": "dynamic inverted softmax, k=1, beta=20; reference training scores only",
+  "source": "https://github.com/ioanacroi/qb-norm/blob/master/dynamic_inverted_softmax.py",
+  "retrieval_pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "retrieval_replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "official_test_used": false,
+  "new_fits": 0
+}

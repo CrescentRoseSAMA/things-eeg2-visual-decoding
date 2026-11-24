@@ -1,0 +1,32 @@
+{
+  "official_test_used": false,
+  "new_fits": 0,
+  "diagnostics": [
+    {
+      "stage": "pilot",
+      "runs": 2,
+      "passed": true,
+      "mean_rho": 0.8650651325825327
+    },
+    {
+      "stage": "replication",
+      "runs": 16,
+      "passed": true,
+      "mean_rho": 0.8738048786928401
+    }
+  ],
+  "retrieval": [
+    {
+      "stage": "pilot",
+      "runs": 2,
+      "query_evaluations": 2000,
+      "candidate_top1_pct": 7.4,
+      "control_top1_pct": 7.4,
+      "delta_top1_pp": 0.0,
+      "candidate_top5_pct": 23.55,
+      "control_top5_pct": 21.65,
+      "delta_top5_pp": 1.9,
+      "passed": false
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "control": "ab_pool4 epoch 100",
+  "candidates": "top 5 from frozen QB-Norm, beta 20, k 1",
+  "rerank": "original ab_pool4 score within the five; retain QB order below rank five",
+  "ties": "ascending template index",
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "new_fits": 0,
+  "official_test_used": false
+}

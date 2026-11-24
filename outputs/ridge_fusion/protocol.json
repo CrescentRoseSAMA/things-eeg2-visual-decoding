@@ -1,0 +1,11 @@
+{
+  "cnn": "ab_pool4, epoch 100",
+  "ridge": "full80, alpha 0.1, same subject and split",
+  "score": "0.75 * original CNN dot product + 0.25 * full80 ridge dot product",
+  "weight_search": false,
+  "query_count": 1000,
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "training_runs": 0,
+  "official_test_used": false
+}

@@ -1,0 +1,17 @@
+{
+  "model": "ab_pool4",
+  "checkpoint": "dev, epoch 100",
+  "mean_rows": "all 14540 dev_train rows only",
+  "query": "1000 held-out queries; unchanged 200 five-image template means",
+  "score": "L2-normalize(query embedding minus training embedding mean) dot raw templates",
+  "coefficient": 1,
+  "training_runs": 0,
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "transitions": [
+    "rank 2..5 to 1",
+    "rank >5 to 1",
+    "rank 1 to >1"
+  ],
+  "formal_test_used": false
+}

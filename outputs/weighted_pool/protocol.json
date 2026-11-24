@@ -1,0 +1,15 @@
+{
+  "control": "ab_pool4",
+  "candidate": "ab_pool4_weighted",
+  "pooling": "32 channel-specific softmax distributions over four consecutive samples, stride four, shared across windows, all logits start at zero",
+  "extra_parameters": 128,
+  "loss": "symmetric image InfoNCE",
+  "lr": 0.0002,
+  "temperature": 0.07,
+  "batch": 128,
+  "epochs": 100,
+  "checkpoint_interval": 5,
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "official_test_used": false
+}

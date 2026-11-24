@@ -1,0 +1,37 @@
+{
+  "model": "ab_pool4",
+  "epochs_pretrain": 40,
+  "epochs_finetune": 100,
+  "lr": 0.0002,
+  "batch": 128,
+  "temperature": 0.07,
+  "sources": "eight subjects excluding both members of each target pair",
+  "sampling": "one source per image per epoch; each block of eight epochs visits all sources once per image",
+  "preprocess": "per subject and channel, statistics computed only from current training rows",
+  "transfer": "encoder weights and batch norm buffers; reset Adam and shuffle at fine-tuning",
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "original_reference": "saved seed 0 single-subject 100-epoch result",
+  "matched_pilot": "same pilot gate vs target-only 40+100 epochs, with the same optimizer reset",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "replication_reference": "target-only 40+100 on the new split",
+  "replication_split": "seed 2027: 200 classes outside the first 200 held-out classes, five support and five query rows per class; all models retrained from scratch",
+  "replication_folds": [
+    [
+      3,
+      4
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      7,
+      8
+    ],
+    [
+      9,
+      10
+    ]
+  ],
+  "official_test_used": false
+}

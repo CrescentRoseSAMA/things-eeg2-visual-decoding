@@ -1,0 +1,50 @@
+{
+  "scope": "development only",
+  "metrics": [
+    "Top-1",
+    "Top-5"
+  ],
+  "ridge_mean_percent": {
+    "pooled10": [
+      4.29,
+      14.67
+    ],
+    "full80": [
+      5.46,
+      18.72
+    ]
+  },
+  "ridge_delta_pp": [
+    1.17,
+    4.05
+  ],
+  "ridge_improved_subjects": [
+    9,
+    10
+  ],
+  "cnn_mean_percent": {
+    "ab": [
+      6.8,
+      21.35
+    ],
+    "ab_pool4": [
+      7.4,
+      21.65
+    ]
+  },
+  "cnn_paired_delta_pp": [
+    [
+      0.6,
+      0.9
+    ],
+    [
+      0.6,
+      -0.3
+    ]
+  ],
+  "cnn_mean_delta_pp": [
+    0.6,
+    0.3
+  ],
+  "candidate_for_replication": true
+}

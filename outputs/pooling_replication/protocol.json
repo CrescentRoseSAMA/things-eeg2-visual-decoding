@@ -1,0 +1,36 @@
+{
+  "scope": "development only, previous 200 held-out training concepts",
+  "subjects": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "seeds": [
+    1,
+    2
+  ],
+  "configs": [
+    "ab",
+    "ab_pool4",
+    "ab_pool8_stride4"
+  ],
+  "epochs": 100,
+  "batch_size": 128,
+  "learning_rate": 0.0002,
+  "temperature": 0.07,
+  "readout": "epoch 100",
+  "primary": "ab_pool4 minus ab",
+  "window_control": "ab_pool4 minus ab_pool8_stride4",
+  "overlap": "8-point window, stride 4, symmetric padding 2; edge means exclude padding",
+  "rule": "Each seed's across-subject Top-1 delta >0, >=5/8 positive subject mean Top-1 deltas, pooled mean Top-5 delta >=0. Apply separately to each contrast.",
+  "metrics": [
+    "Top-1",
+    "Top-5"
+  ],
+  "design": "paired within subject and seed"
+}

@@ -1,0 +1,12 @@
+{
+  "stage": "pilot",
+  "runs": 2,
+  "query_evaluations": 2000,
+  "candidate_top1_pct": 7.15,
+  "control_top1_pct": 7.4,
+  "delta_top1_pp": -0.25,
+  "candidate_top5_pct": 21.55,
+  "control_top5_pct": 21.65,
+  "delta_top5_pp": -0.1,
+  "passed": false
+}

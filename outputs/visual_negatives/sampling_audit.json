@@ -1,0 +1,10 @@
+{
+  "random": {
+    "extra_comparisons": 232640,
+    "among_nearest20": 3050
+  },
+  "near": {
+    "extra_comparisons": 232640,
+    "among_nearest20": 232640
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "model": "ab_pool4",
+  "loss": "original symmetric image InfoNCE",
+  "epochs": 100,
+  "batch": 128,
+  "adam_lr": 0.0002,
+  "temperature": 0.07,
+  "image_visits_per_epoch": 1,
+  "training": "p=1/2 four-repeat mean; otherwise uniformly omit one of four real repeats",
+  "sampling": "independent NumPy default_rng([seed, one_based_epoch, 304]); dev_train row order",
+  "normalization": "same training four-repeat mean and std per channel as control",
+  "evaluation": "unchanged four-repeat EEG, 1000 development queries, fixed epoch 100",
+  "pilot": "subjects 1,2 seed 0; both Top1 gains > 0 and mean Top5 gain >= 0",
+  "replication": "subjects 3..10 seeds 1,2; each seed mean Top1 gain > 0, >=5/8 subjects with positive seed-averaged Top1 gain, mean Top1 gain >=0.5pp and Top5 gain >=0",
+  "formal_test_used": false
+}

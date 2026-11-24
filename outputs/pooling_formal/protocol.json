@@ -1,0 +1,42 @@
+{
+  "model": "ab_pool4",
+  "reference": "original ab checkpoints and paired scores",
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "epochs": 100,
+  "batch_size": 128,
+  "learning_rate": 0.0002,
+  "temperature": 0.07,
+  "fit": "all 1654 official training classes, within subject",
+  "evaluate": "fixed 200 published templates",
+  "readout": "epoch 100; all 50 fits finish before test evaluation",
+  "selection": "development replication primary contrast passed; equal-capacity contrast did not",
+  "endpoints": [
+    "Top-1",
+    "Top-5"
+  ],
+  "target_pct": [
+    15.6,
+    42.8
+  ],
+  "aggregation": "average ten subjects per seed, then mean and sample SD across seeds",
+  "paired_effect": "ab_pool4 minus original ab in percentage points, identical subject and seed",
+  "interpretation": "follow-up evaluation reuses the previously reported official test classes"
+}

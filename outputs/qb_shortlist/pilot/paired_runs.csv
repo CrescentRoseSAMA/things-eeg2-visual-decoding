@@ -1,0 +1,3 @@
+subject,seed,queries,control_top1_hits,top1_hits,gain1,control_top5_hits,top5_hits,gain5,changed_first,gained_first,lost_first
+1,0,1000,78,76,-2,218,238,20,30,0,2
+2,0,1000,70,71,1,215,233,18,37,1,0
