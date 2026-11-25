@@ -37,7 +37,8 @@ class EEGEncoder(nn.Module):
         overlap = config == "ab_pool8_stride4"
         learned = config == "ab_pool4_weighted"
         pointwise = config == "ab_pool4_pwmix"
-        finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise
+        residual_projection = config == "ab_pool4_resproj"
+        finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise or residual_projection
         if config == "b_pool4":
             config = "b"
         elif finer_time:
@@ -84,6 +85,15 @@ class EEGEncoder(nn.Module):
         if pointwise:
             with torch.random.fork_rng(devices=[]):
                 self.readout.insert(3, ResidualPointwiseMixing())
+        self.residual_projection = None
+        if residual_projection:
+            with torch.random.fork_rng(devices=[]):
+                self.residual_projection = nn.Sequential(
+                    nn.LayerNorm(768), nn.Linear(768, 256), nn.GELU(),
+                    nn.Dropout(0.5), nn.Linear(256, 768),
+                )
+            nn.init.zeros_(self.residual_projection[-1].weight)
+            nn.init.zeros_(self.residual_projection[-1].bias)
 
     def forward(self, eeg):
         signal = eeg.unsqueeze(1)
@@ -95,7 +105,10 @@ class EEGEncoder(nn.Module):
             summary = features.mean(dim=(1, 3))
             gains = self.electrode_gate(summary)
             features = features * gains[:, None, :, None]
-        return F.normalize(self.readout(features), dim=1)
+        z = self.readout(features)
+        if self.residual_projection is not None:
+            z = z + self.residual_projection(z)
+        return F.normalize(z, dim=1)
 
 
 def contrastive_loss(eeg_normalized, image, extra_images=None):

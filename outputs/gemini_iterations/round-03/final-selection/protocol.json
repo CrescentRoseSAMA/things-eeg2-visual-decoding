@@ -1,0 +1,5 @@
+{
+  "candidate": null,
+  "eligible": [],
+  "selection": "Top-1, Top-5, then fewer parameters"
+}

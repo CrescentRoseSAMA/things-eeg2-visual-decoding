@@ -6,6 +6,22 @@ from eeg_model import EEGEncoder
 
 
 class PoolControlTest(unittest.TestCase):
+    def test_residual_projection_starts_as_the_control_and_can_learn(self):
+        torch.manual_seed(7)
+        control = EEGEncoder("ab_pool4").eval()
+        control_rng = torch.get_rng_state()
+        torch.manual_seed(7)
+        candidate = EEGEncoder("ab_pool4_resproj").eval()
+        self.assertTrue(torch.equal(torch.get_rng_state(), control_rng))
+        self.assertEqual(sum(p.numel() for p in candidate.parameters()), 889353)
+        for name, value in control.state_dict().items():
+            torch.testing.assert_close(candidate.state_dict()[name], value, rtol=0, atol=0)
+        eeg = torch.randn(4, 17, 80)
+        embeddings = candidate(eeg)
+        torch.testing.assert_close(embeddings, control(eeg), rtol=0, atol=0)
+        embeddings[:, 0].sum().backward()
+        self.assertGreater(candidate.residual_projection[-1].weight.grad.abs().sum().item(), 0)
+
     def test_pointwise_mixer_starts_as_the_control_and_can_learn(self):
         torch.manual_seed(7)
         control = EEGEncoder("ab_pool4").eval()

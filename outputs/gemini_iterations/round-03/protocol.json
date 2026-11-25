@@ -1,0 +1,32 @@
+{
+  "candidate": "ab_pool4_resproj",
+  "parent": "ab_pool4",
+  "hypothesis": "Zero-initialized LayerNorm and two-layer bottleneck residual projection before embedding normalization",
+  "reference": "ab_pool4",
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "epochs": 100,
+  "batch": 128,
+  "learning_rate": 0.0002,
+  "split_seed": 2026,
+  "loss": "symmetric EEG-image InfoNCE",
+  "scoring": "epoch 100, unit EEG embedding dot frozen CLIP template",
+  "normalization": "per electrode, training rows only",
+  "official_test_used": false
+}
