@@ -15,3 +15,15 @@
 ```powershell
 python eeg_gemini_iterations.py 1 --candidate b_pool4 --hypothesis "Single-scale temporal filtering with 4-point pooling and the ab_pool4 projection width"
 ```
+
+## 第二轮 · 四点池化前的残差通道混合
+
+Gemini 核对第一轮配对数据后，建议将 `Conv2d(32,32,1)`、批归一化和 ELU 组成残差分支，插在原空间读出的 ELU 与四点池化之间。`ab_pool4_pwmix` 的逐通道残差系数从零开始，因此初始输出与 `ab_pool4` 一致。新增 1,120 个参数。
+
+平均 Top-1 为 7.425%，Top-5 为 22.625%，较 `ab_pool4` 分别变化 −0.350 和 −0.075 个百分点。仅一名被试的 Top-1 提升，未过先导门槛。四组检查点的残差系数绝对值均值依次为 0.295643、0.282681、0.253430 和 0.246075。
+
+[模型](../../eeg_model.py) · [实验入口](../../eeg_gemini_iterations.py) · [协议](round-02/protocol.json) · [汇总](round-02/summary.json) · [配对数据](round-02/paired_runs.csv)
+
+```powershell
+python eeg_gemini_iterations.py 2 --candidate ab_pool4_pwmix --hypothesis "Nonlinear residual channel mixing before four-point pooling, initialized as the ab_pool4 control"
+```

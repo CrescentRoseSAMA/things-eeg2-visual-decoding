@@ -17,6 +17,18 @@ class WeightedTimePool(nn.Module):
         return (x.unfold(-1, 4, 4) * weights).sum(dim=-1)
 
 
+class ResidualPointwiseMixing(nn.Module):
+    """Mix temporal feature channels before averaging adjacent samples."""
+
+    def __init__(self):
+        super().__init__()
+        self.branch = nn.Sequential(nn.Conv2d(32, 32, 1, bias=False), nn.BatchNorm2d(32), nn.ELU())
+        self.alpha = nn.Parameter(torch.zeros(1, 32, 1, 1))
+
+    def forward(self, x):
+        return x + self.alpha * self.branch(x)
+
+
 class EEGEncoder(nn.Module):
     """Encode a batch of standardized 17-electrode, 80-sample epochs."""
 
@@ -24,7 +36,8 @@ class EEGEncoder(nn.Module):
         super().__init__()
         overlap = config == "ab_pool8_stride4"
         learned = config == "ab_pool4_weighted"
-        finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned
+        pointwise = config == "ab_pool4_pwmix"
+        finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise
         if config == "b_pool4":
             config = "b"
         elif finer_time:
@@ -68,6 +81,9 @@ class EEGEncoder(nn.Module):
                 finer.weight.copy_(original.weight.repeat_interleave(2, dim=1) / 2)
                 finer.bias.copy_(original.bias)
             self.readout[-1] = finer
+        if pointwise:
+            with torch.random.fork_rng(devices=[]):
+                self.readout.insert(3, ResidualPointwiseMixing())
 
     def forward(self, eeg):
         signal = eeg.unsqueeze(1)
