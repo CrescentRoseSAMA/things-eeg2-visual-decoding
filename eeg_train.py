@@ -12,7 +12,8 @@ import numpy as np
 import torch
 
 from eeg_data import load_design, load_subject
-from eeg_model import ClassPrototypes, EEGEncoder, contrastive_loss
+from eeg_model import (LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE,
+                       ClassPrototypes, EEGEncoder, contrastive_loss, contrastive_temperature)
 
 
 CONFIGS = ("baseline", "a", "b", "ab")
@@ -137,7 +138,9 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
     folder = run_dir(stage, config, subject, seed)
     folder.mkdir(parents=True, exist_ok=True)
     settings = dict(config=config, subject=subject, seed=seed, stage=stage,
-                    epochs=epochs, batch_size=batch, lr=LR, temperature=0.07)
+                    epochs=epochs, batch_size=batch, lr=LR, temperature=PAIR_TEMPERATURE)
+    if config == LEARNABLE_TEMPERATURE_CONFIG:
+        settings.update(learnable_temperature=True, max_logit_scale=MAX_LOGIT_SCALE)
     if split is not None:
         settings["split"] = split
     if snapshot_epochs:
@@ -211,7 +214,7 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
             emb = model(epoch_x[ids])
             paired = images[ids]
             extra = None if negatives is None else negative_images[extra_rows[ids]]
-            loss = contrastive_loss(emb, paired, extra)
+            loss = contrastive_loss(emb, paired, extra, logit_scale=model.logit_scale)
             if bank is not None:
                 loss = 0.75 * loss + 0.25 * bank.loss(emb, paired, ids)
             loss.backward()
@@ -221,6 +224,8 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
         if not np.isfinite(epoch_loss):
             raise ValueError(f"Non-finite loss: {folder}, epoch {epoch}")
         row = {"epoch": epoch, "loss": epoch_loss}
+        if model.logit_scale is not None:
+            row["temperature"] = float(contrastive_temperature(model.logit_scale.detach()))
         if val is not None:
             row["val_top1"], row["val_top5"] = accuracy(score(model, val, centers, batch), labels)
         if DEVICE.type == "cuda":
@@ -246,6 +251,8 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
     stats = dict(settings, parameters=sum(p.numel() for p in model.parameters()),
                  train_seconds=sum(float(r["seconds"]) for r in rows), trained_epochs=len(rows),
                  peak_gpu_mib=torch.cuda.max_memory_allocated()/2**20 if DEVICE.type == "cuda" else 0)
+    if model.logit_scale is not None:
+        stats["final_temperature"] = rows[-1]["temperature"]
     if stage == "smoke":
         np.save(folder / "before_reload.npy", score(model, val, centers, batch).cpu().numpy())
     save_json(folder / "training.json", stats)

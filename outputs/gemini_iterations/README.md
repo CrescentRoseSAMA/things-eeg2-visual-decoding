@@ -44,3 +44,15 @@ python eeg_gemini_iterations.py finalize
 ## 筛选结果
 
 三轮候选均未达到先导门槛。预设独立复验为新类别划分 2027、Sub05–Sub10、种子 1 和 2。正式评测需独立复验平均 Top-1 至少 +1.0 个百分点、Top-5 至少 +2.0 个百分点、两个种子的平均 Top-1 均提高且至少四名被试的平均 Top-1 提高。此次停在先导，正式参考仍为 `ab_pool4`。[筛选协议](round-03/final-selection/protocol.json) · [筛选结果](round-03/final-selection/summary.json)
+
+## 第四轮 · 可学习的对比损失温度
+
+`ab_pool4_resproj_learn_temp` 在第三轮残差投影头上添加一个可学习标量。训练温度从 0.07 开始，其倒数最高为 100。四组沿用原开发划分及被试与种子配对，评测仍用 EEG 向量与冻结 CLIP 模板的点积。
+
+平均 Top-1 为 6.550%，Top-5 为 20.500%。相对第三轮固定温度版分别下降 0.825 和 4.350 个百分点，相对 `ab_pool4` 分别下降 1.225 和 2.200 个百分点。四组温度在第 85–86 轮均触及 0.01 下限。本轮止于开发集。
+
+[模型](../../eeg_model.py) · [训练](../../eeg_train.py) · [协议](round-04/protocol.json) · [汇总](round-04/summary.json) · [配对数据](round-04/paired_runs.csv)
+
+```powershell
+python eeg_gemini_iterations.py 4 --candidate ab_pool4_resproj_learn_temp --parent ab_pool4_resproj --hypothesis "Learnable InfoNCE temperature on the residual projection head, initialized at 0.07 and capped at inverse temperature 100"
+```

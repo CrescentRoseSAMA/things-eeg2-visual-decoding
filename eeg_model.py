@@ -1,8 +1,15 @@
 """Lightweight EEG encoders and the paired EEG–image training objective."""
 
+import math
+
 import torch
 from torch import nn
 from torch.nn import functional as F
+
+
+PAIR_TEMPERATURE = 0.07
+MAX_LOGIT_SCALE = 100.0
+LEARNABLE_TEMPERATURE_CONFIG = "ab_pool4_resproj_learn_temp"
 
 
 class WeightedTimePool(nn.Module):
@@ -37,7 +44,8 @@ class EEGEncoder(nn.Module):
         overlap = config == "ab_pool8_stride4"
         learned = config == "ab_pool4_weighted"
         pointwise = config == "ab_pool4_pwmix"
-        residual_projection = config == "ab_pool4_resproj"
+        learn_temperature = config == LEARNABLE_TEMPERATURE_CONFIG
+        residual_projection = config == "ab_pool4_resproj" or learn_temperature
         finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise or residual_projection
         if config == "b_pool4":
             config = "b"
@@ -94,6 +102,9 @@ class EEGEncoder(nn.Module):
                 )
             nn.init.zeros_(self.residual_projection[-1].weight)
             nn.init.zeros_(self.residual_projection[-1].bias)
+        self.logit_scale = None
+        if learn_temperature:
+            self.logit_scale = nn.Parameter(torch.tensor(math.log(1 / PAIR_TEMPERATURE)))
 
     def forward(self, eeg):
         signal = eeg.unsqueeze(1)
@@ -111,14 +122,21 @@ class EEGEncoder(nn.Module):
         return F.normalize(z, dim=1)
 
 
-def contrastive_loss(eeg_normalized, image, extra_images=None):
+def contrastive_temperature(logit_scale):
+    if logit_scale is None:
+        return PAIR_TEMPERATURE
+    return logit_scale.exp().clamp(max=MAX_LOGIT_SCALE).reciprocal()
+
+
+def contrastive_loss(eeg_normalized, image, extra_images=None, *, logit_scale=None):
     """Symmetric InfoNCE using the matching diagonal of the paired minibatch."""
+    temperature = contrastive_temperature(logit_scale)
     images_normalized = F.normalize(image, dim=1)
-    logits = (eeg_normalized @ images_normalized.T) / 0.07
+    logits = (eeg_normalized @ images_normalized.T) / temperature
     targets = torch.arange(len(logits), device=logits.device)
     forward_logits = logits
     if extra_images is not None:
-        extra = torch.bmm(extra_images, eeg_normalized.unsqueeze(2)).squeeze(2) / 0.07
+        extra = torch.bmm(extra_images, eeg_normalized.unsqueeze(2)).squeeze(2) / temperature
         forward_logits = torch.cat((logits, extra), dim=1)
     return (F.cross_entropy(forward_logits, targets) + F.cross_entropy(logits.T, targets)) / 2
 

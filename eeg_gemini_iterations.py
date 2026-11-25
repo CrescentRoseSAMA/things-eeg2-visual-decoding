@@ -8,6 +8,7 @@ import torch
 from eeg_cross_subject import fresh_split
 from eeg_data import CACHE, load_subject
 from eeg_evaluate import ranks_and_accuracy
+from eeg_model import LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE
 from eeg_pooling_dev import evaluate_checkpoint
 from eeg_pooling_formal import checked_metrics
 from eeg_train import (DEVICE, LR, OUT, load_json, reload_and_score, run_dir,
@@ -121,6 +122,9 @@ def result_row(subject, seed, candidate, control, new, old, stats):
                      f"top{k}_delta_pp": round(100 * (a - b) / len(new), 8)})
     for key in ("parameters", "train_seconds", "peak_gpu_mib"):
         data[key], data[f"control_{key}"] = stats[candidate][key], stats[control][key]
+    if "final_temperature" in stats[candidate]:
+        data["final_temperature"] = stats[candidate]["final_temperature"]
+        data["control_temperature"] = stats[control].get("final_temperature", stats[control]["temperature"])
     return data
 
 
@@ -219,7 +223,7 @@ def finalize():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("round", choices=("1", "2", "3", "finalize"))
+    parser.add_argument("round", choices=("1", "2", "3", "4", "finalize"))
     parser.add_argument("--candidate")
     parser.add_argument("--parent", default=REFERENCE)
     parser.add_argument("--hypothesis")
@@ -237,6 +241,9 @@ def main():
                     learning_rate=LR, split_seed=2026, loss="symmetric EEG-image InfoNCE",
                     scoring="epoch 100, unit EEG embedding dot frozen CLIP template",
                     normalization="per electrode, training rows only", official_test_used=False)
+    if args.candidate == LEARNABLE_TEMPERATURE_CONFIG:
+        protocol.update(initial_temperature=PAIR_TEMPERATURE, max_logit_scale=MAX_LOGIT_SCALE,
+                        temperature="learned scalar in training loss only")
     development(directory, protocol, PILOT, 2026)
 
 

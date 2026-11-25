@@ -2,10 +2,35 @@ import unittest
 
 import torch
 
-from eeg_model import EEGEncoder
+from eeg_model import EEGEncoder, contrastive_loss
 
 
 class PoolControlTest(unittest.TestCase):
+    def test_learnable_temperature_starts_at_fixed_loss_and_can_learn(self):
+        torch.manual_seed(7)
+        control = EEGEncoder("ab_pool4_resproj").eval()
+        torch.manual_seed(7)
+        candidate = EEGEncoder("ab_pool4_resproj_learn_temp").eval()
+        self.assertEqual(set(candidate.state_dict()) - set(control.state_dict()), {"logit_scale"})
+        for name, value in control.state_dict().items():
+            torch.testing.assert_close(candidate.state_dict()[name], value, rtol=0, atol=0)
+        eeg = torch.randn(4, 17, 80)
+        images = torch.randn(4, 768)
+        with torch.no_grad():
+            embeddings = candidate(eeg)
+            torch.testing.assert_close(embeddings, control(eeg), rtol=0, atol=0)
+        torch.testing.assert_close(candidate.logit_scale.exp().reciprocal(), torch.tensor(0.07))
+        expected = contrastive_loss(embeddings, images)
+        loss = contrastive_loss(embeddings, images, logit_scale=candidate.logit_scale)
+        torch.testing.assert_close(loss, expected)
+        loss.backward()
+        self.assertGreater(candidate.logit_scale.grad.abs().item(), 0)
+        logits = embeddings @ torch.nn.functional.normalize(images, dim=1).T * 100
+        labels = torch.arange(len(embeddings))
+        capped = (torch.nn.functional.cross_entropy(logits, labels)
+                  + torch.nn.functional.cross_entropy(logits.T, labels)) / 2
+        torch.testing.assert_close(contrastive_loss(embeddings, images, logit_scale=torch.tensor(10.0)), capped)
+
     def test_residual_projection_starts_as_the_control_and_can_learn(self):
         torch.manual_seed(7)
         control = EEGEncoder("ab_pool4").eval()

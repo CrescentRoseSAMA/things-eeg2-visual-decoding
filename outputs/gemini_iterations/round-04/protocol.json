@@ -1,0 +1,35 @@
+{
+  "candidate": "ab_pool4_resproj_learn_temp",
+  "parent": "ab_pool4_resproj",
+  "hypothesis": "Learnable InfoNCE temperature on the residual projection head, initialized at 0.07 and capped at inverse temperature 100",
+  "reference": "ab_pool4",
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "epochs": 100,
+  "batch": 128,
+  "learning_rate": 0.0002,
+  "split_seed": 2026,
+  "loss": "symmetric EEG-image InfoNCE",
+  "scoring": "epoch 100, unit EEG embedding dot frozen CLIP template",
+  "normalization": "per electrode, training rows only",
+  "official_test_used": false,
+  "initial_temperature": 0.07,
+  "max_logit_scale": 100.0,
+  "temperature": "learned scalar in training loss only"
+}
