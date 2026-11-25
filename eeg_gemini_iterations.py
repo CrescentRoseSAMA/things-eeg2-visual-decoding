@@ -8,7 +8,8 @@ import torch
 from eeg_cross_subject import fresh_split
 from eeg_data import CACHE, load_subject
 from eeg_evaluate import ranks_and_accuracy
-from eeg_model import LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE
+from eeg_model import (COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT,
+                       LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE)
 from eeg_pooling_dev import evaluate_checkpoint
 from eeg_pooling_formal import checked_metrics
 from eeg_train import (DEVICE, LR, OUT, load_json, reload_and_score, run_dir,
@@ -223,7 +224,7 @@ def finalize():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("round", choices=("1", "2", "3", "4", "finalize"))
+    parser.add_argument("round", choices=("1", "2", "3", "4", "5", "finalize"))
     parser.add_argument("--candidate")
     parser.add_argument("--parent", default=REFERENCE)
     parser.add_argument("--hypothesis")
@@ -244,6 +245,9 @@ def main():
     if args.candidate == LEARNABLE_TEMPERATURE_CONFIG:
         protocol.update(initial_temperature=PAIR_TEMPERATURE, max_logit_scale=MAX_LOGIT_SCALE,
                         temperature="learned scalar in training loss only")
+    if args.candidate == COSINE_REGRESSION_CONFIG:
+        protocol.update(loss="weighted symmetric InfoNCE and matched-pair cosine distance",
+                        cosine_regression_weight=COSINE_REGRESSION_WEIGHT, temperature=PAIR_TEMPERATURE)
     development(directory, protocol, PILOT, 2026)
 
 

@@ -10,6 +10,8 @@ from torch.nn import functional as F
 PAIR_TEMPERATURE = 0.07
 MAX_LOGIT_SCALE = 100.0
 LEARNABLE_TEMPERATURE_CONFIG = "ab_pool4_resproj_learn_temp"
+COSINE_REGRESSION_CONFIG = "ab_pool4_resproj_cosine"
+COSINE_REGRESSION_WEIGHT = 0.25
 
 
 class WeightedTimePool(nn.Module):
@@ -45,7 +47,7 @@ class EEGEncoder(nn.Module):
         learned = config == "ab_pool4_weighted"
         pointwise = config == "ab_pool4_pwmix"
         learn_temperature = config == LEARNABLE_TEMPERATURE_CONFIG
-        residual_projection = config == "ab_pool4_resproj" or learn_temperature
+        residual_projection = config in {"ab_pool4_resproj", COSINE_REGRESSION_CONFIG} or learn_temperature
         finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise or residual_projection
         if config == "b_pool4":
             config = "b"
@@ -128,17 +130,21 @@ def contrastive_temperature(logit_scale):
     return logit_scale.exp().clamp(max=MAX_LOGIT_SCALE).reciprocal()
 
 
-def contrastive_loss(eeg_normalized, image, extra_images=None, *, logit_scale=None):
-    """Symmetric InfoNCE using the matching diagonal of the paired minibatch."""
+def contrastive_loss(eeg_normalized, image, extra_images=None, *, logit_scale=None, cosine_weight=0.0):
+    """Symmetric InfoNCE with an optional cosine loss on the matched pairs."""
     temperature = contrastive_temperature(logit_scale)
     images_normalized = F.normalize(image, dim=1)
-    logits = (eeg_normalized @ images_normalized.T) / temperature
+    similarities = eeg_normalized @ images_normalized.T
+    logits = similarities / temperature
     targets = torch.arange(len(logits), device=logits.device)
     forward_logits = logits
     if extra_images is not None:
         extra = torch.bmm(extra_images, eeg_normalized.unsqueeze(2)).squeeze(2) / temperature
         forward_logits = torch.cat((logits, extra), dim=1)
-    return (F.cross_entropy(forward_logits, targets) + F.cross_entropy(logits.T, targets)) / 2
+    loss = (F.cross_entropy(forward_logits, targets) + F.cross_entropy(logits.T, targets)) / 2
+    if cosine_weight:
+        return (1 - cosine_weight) * loss + cosine_weight * (1 - similarities.diagonal().mean())
+    return loss
 
 
 class ClassPrototypes:

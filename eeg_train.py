@@ -12,7 +12,8 @@ import numpy as np
 import torch
 
 from eeg_data import load_design, load_subject
-from eeg_model import (LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE,
+from eeg_model import (COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT,
+                       LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE,
                        ClassPrototypes, EEGEncoder, contrastive_loss, contrastive_temperature)
 
 
@@ -141,6 +142,9 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
                     epochs=epochs, batch_size=batch, lr=LR, temperature=PAIR_TEMPERATURE)
     if config == LEARNABLE_TEMPERATURE_CONFIG:
         settings.update(learnable_temperature=True, max_logit_scale=MAX_LOGIT_SCALE)
+    cosine_weight = COSINE_REGRESSION_WEIGHT if config == COSINE_REGRESSION_CONFIG else 0.0
+    if cosine_weight:
+        settings["cosine_regression_weight"] = cosine_weight
     if split is not None:
         settings["split"] = split
     if snapshot_epochs:
@@ -214,7 +218,8 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
             emb = model(epoch_x[ids])
             paired = images[ids]
             extra = None if negatives is None else negative_images[extra_rows[ids]]
-            loss = contrastive_loss(emb, paired, extra, logit_scale=model.logit_scale)
+            loss = contrastive_loss(emb, paired, extra, logit_scale=model.logit_scale,
+                                    cosine_weight=cosine_weight)
             if bank is not None:
                 loss = 0.75 * loss + 0.25 * bank.loss(emb, paired, ids)
             loss.backward()

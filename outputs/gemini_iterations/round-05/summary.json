@@ -1,0 +1,47 @@
+{
+  "ab_pool4": {
+    "runs": 4,
+    "candidate_pct": [
+      7.775,
+      24.45
+    ],
+    "control_pct": [
+      7.775,
+      22.7
+    ],
+    "delta_pp": [
+      0.0,
+      1.75
+    ],
+    "top1_subject_wins": 1,
+    "positive_top1_seeds": [
+      0
+    ],
+    "parameters": 889353,
+    "pilot_pass": false,
+    "formal_gate_pass": false
+  },
+  "ab_pool4_resproj": {
+    "runs": 4,
+    "candidate_pct": [
+      7.775,
+      24.45
+    ],
+    "control_pct": [
+      7.375,
+      24.85
+    ],
+    "delta_pp": [
+      0.4,
+      -0.4
+    ],
+    "top1_subject_wins": 4,
+    "positive_top1_seeds": [
+      0,
+      1
+    ],
+    "parameters": 889353,
+    "pilot_pass": false,
+    "formal_gate_pass": false
+  }
+}

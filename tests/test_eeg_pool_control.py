@@ -6,6 +6,26 @@ from eeg_model import EEGEncoder, contrastive_loss
 
 
 class PoolControlTest(unittest.TestCase):
+    def test_cosine_regression_uses_the_same_encoder_and_matched_pairs(self):
+        torch.manual_seed(7)
+        control = EEGEncoder("ab_pool4_resproj").eval()
+        torch.manual_seed(7)
+        candidate = EEGEncoder("ab_pool4_resproj_cosine").eval()
+        self.assertEqual(candidate.state_dict().keys(), control.state_dict().keys())
+        for name, value in control.state_dict().items():
+            torch.testing.assert_close(candidate.state_dict()[name], value, rtol=0, atol=0)
+        self.assertIsNone(candidate.logit_scale)
+
+        raw_eeg = torch.randn(4, 768, requires_grad=True)
+        eeg = torch.nn.functional.normalize(raw_eeg, dim=1)
+        images = torch.randn(4, 768)
+        cosine = torch.nn.functional.cosine_similarity(eeg, images).mean()
+        expected = 0.75 * contrastive_loss(eeg, images) + 0.25 * (1 - cosine)
+        actual = contrastive_loss(eeg, images, cosine_weight=0.25)
+        torch.testing.assert_close(actual, expected)
+        torch.testing.assert_close(torch.autograd.grad(actual, raw_eeg, retain_graph=True)[0],
+                                   torch.autograd.grad(expected, raw_eeg)[0])
+
     def test_learnable_temperature_starts_at_fixed_loss_and_can_learn(self):
         torch.manual_seed(7)
         control = EEGEncoder("ab_pool4_resproj").eval()

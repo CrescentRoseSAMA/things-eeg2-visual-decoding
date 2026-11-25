@@ -56,3 +56,15 @@ python eeg_gemini_iterations.py finalize
 ```powershell
 python eeg_gemini_iterations.py 4 --candidate ab_pool4_resproj_learn_temp --parent ab_pool4_resproj --hypothesis "Learnable InfoNCE temperature on the residual projection head, initialized at 0.07 and capped at inverse temperature 100"
 ```
+
+## 第五轮 · InfoNCE 与余弦回归联合损失
+
+`ab_pool4_resproj_cosine` 沿用第三轮的编码器与固定温度 0.07，训练损失改为 `0.75 × 对称 InfoNCE + 0.25 × (1 − 配对余弦相似度)`。四组均完成 100 轮，使用相同开发集查询与模板。
+
+平均 Top-1 为 7.775%，Top-5 为 24.450%。相对第三轮，四名被试的 Top-1 均提高，平均变化为 +0.400 和 −0.400 个百分点。相对原版 `ab_pool4`，Top-1 持平，Top-5 提高 1.750 个百分点。本轮止于开发集。
+
+[模型与损失](../../eeg_model.py) · [训练](../../eeg_train.py) · [协议](round-05/protocol.json) · [汇总](round-05/summary.json) · [配对数据](round-05/paired_runs.csv)
+
+```powershell
+python eeg_gemini_iterations.py 5 --candidate ab_pool4_resproj_cosine --parent ab_pool4_resproj --hypothesis "Matched-pair cosine regression at weight 0.25 added to symmetric InfoNCE with fixed 0.07 temperature"
+```
