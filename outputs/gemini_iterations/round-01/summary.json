@@ -1,0 +1,24 @@
+{
+  "ab_pool4": {
+    "runs": 4,
+    "candidate_pct": [
+      7.35,
+      22.775
+    ],
+    "control_pct": [
+      7.775,
+      22.7
+    ],
+    "delta_pp": [
+      -0.425,
+      0.075
+    ],
+    "top1_subject_wins": 1,
+    "positive_top1_seeds": [
+      1
+    ],
+    "parameters": 493545,
+    "pilot_pass": false,
+    "formal_gate_pass": false
+  }
+}

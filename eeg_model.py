@@ -24,8 +24,10 @@ class EEGEncoder(nn.Module):
         super().__init__()
         overlap = config == "ab_pool8_stride4"
         learned = config == "ab_pool4_weighted"
-        finer_time = config == "ab_pool4" or overlap or learned
-        if finer_time:
+        finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned
+        if config == "b_pool4":
+            config = "b"
+        elif finer_time:
             config = "ab"
         if config not in {"baseline", "a", "b", "ab"}:
             raise ValueError(f"Unknown EEG encoder configuration: {config}")

@@ -1,0 +1,32 @@
+{
+  "candidate": "b_pool4",
+  "parent": "ab_pool4",
+  "hypothesis": "Single-scale temporal filtering with 4-point pooling and the ab_pool4 projection width",
+  "reference": "ab_pool4",
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "epochs": 100,
+  "batch": 128,
+  "learning_rate": 0.0002,
+  "split_seed": 2026,
+  "loss": "symmetric EEG-image InfoNCE",
+  "scoring": "epoch 100, unit EEG embedding dot frozen CLIP template",
+  "normalization": "per electrode, training rows only",
+  "official_test_used": false
+}

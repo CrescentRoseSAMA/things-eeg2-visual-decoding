@@ -38,6 +38,7 @@
 !/outputs/**/cnn_protocol.json
 !/outputs/**/cnn_runs.csv
 !/outputs/**/paired_differences.csv
+!/outputs/gemini_iterations/README.md
 !/outputs/evaluation/*.csv
 !/outputs/evaluation/status.json
 !/outputs/querybank/diagnostics/*/runs.csv

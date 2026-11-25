@@ -6,6 +6,19 @@ from eeg_model import EEGEncoder
 
 
 class PoolControlTest(unittest.TestCase):
+    def test_b_pool4_only_changes_pooling_and_head_width(self):
+        torch.manual_seed(7)
+        parent = EEGEncoder("b").eval()
+        torch.manual_seed(7)
+        short = EEGEncoder("b_pool4").eval()
+        self.assertEqual(len(short.temporal), 1)
+        self.assertEqual(short.readout[-1].in_features, 640)
+        self.assertEqual(sum(p.numel() for p in short.parameters()), 493545)
+        torch.testing.assert_close(short.temporal[0].weight, parent.temporal[0].weight)
+        eeg = torch.randn(3, 17, 80)
+        with torch.no_grad():
+            torch.testing.assert_close(short(eeg), parent(eeg), rtol=2e-5, atol=2e-6)
+
     def test_average_windows_and_wide_head_match(self):
         torch.manual_seed(7)
         short = EEGEncoder("ab_pool4")
