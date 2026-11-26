@@ -56,7 +56,7 @@ def training_stats(folder, config, subject, seed):
     return stats
 
 
-def scoring_arms(folder, raw, labels, templates, training_eeg):
+def scoring_arms(folder, raw, labels, templates, training_eeg, *, destination=None):
     """Compare three scores for one fixed checkpoint and persist sample-level evidence."""
     ckpt = torch.load(folder / "checkpoint.pt", map_location=DEVICE)
     model = model_for(CANDIDATE)
@@ -71,10 +71,11 @@ def scoring_arms(folder, raw, labels, templates, training_eeg):
     adjusted = csls_scores(cosine, bank / norms)
     scores = {CANDIDATE: raw, NORMALIZED: cosine, ADJUSTED: adjusted}
     ranks = {name: ranks_and_accuracy(values, labels)[0] for name, values in scores.items()}
-    temporary = folder / "csls.tmp.npz"
+    destination = folder / "csls.npz" if destination is None else destination
+    temporary = destination.with_suffix(".tmp.npz")
     np.savez(temporary, labels=labels, normalized_scores=cosine, csls_scores=adjusted,
              normalized_ranks=ranks[NORMALIZED], csls_ranks=ranks[ADJUSTED])
-    temporary.replace(folder / "csls.npz")
+    temporary.replace(destination)
     return ranks
 
 

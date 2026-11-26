@@ -15,6 +15,7 @@ from eeg_data import load_design, load_subject
 from eeg_model import (COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT,
                        LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE,
                        ClassPrototypes, EEGEncoder, contrastive_loss, contrastive_temperature)
+from eeg_repeat_views import TRIAL_SAMPLING, sample_epoch, sample_subset_epoch
 
 
 CONFIGS = ("baseline", "a", "b", "ab")
@@ -135,7 +136,10 @@ def source_indices(n_images, n_sources, seed, epoch):
 
 
 def train(config, subject, seed, stage, epochs, batch, design, *, split=None, class_labels=None,
-          repeat_views=None, sources=None, initial_checkpoint=None, snapshot_epochs=(), negatives=None):
+          repeat_views=None, trial_repeats=None, sources=None, initial_checkpoint=None, snapshot_epochs=(),
+          negatives=None):
+    if trial_repeats is not None and (repeat_views is not None or sources is not None):
+        raise ValueError("Trial subset augmentation requires within-subject raw trials only")
     folder = run_dir(stage, config, subject, seed)
     folder.mkdir(parents=True, exist_ok=True)
     settings = dict(config=config, subject=subject, seed=seed, stage=stage,
@@ -157,6 +161,8 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
         settings["initial_checkpoint"] = initial_checkpoint.relative_to(OUT).as_posix()
     if repeat_views is not None:
         settings["training_eeg"] = "0.5 four-repeat mean, 0.5 uniform three-repeat mean"
+    if trial_repeats is not None:
+        settings["training_eeg"] = TRIAL_SAMPLING
     if class_labels is not None:
         settings.update(image_loss_weight=0.75, leave_one_out_class_loss_weight=0.25)
     if (folder / "settings.json").exists() and load_json(folder / "settings.json") != settings:
@@ -172,8 +178,13 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
         x = source_x[0]
         image_rows = torch.arange(len(x), device=DEVICE)
         val = None
-    if repeat_views is not None:
-        from eeg_repeat_views import sample_epoch
+    sample = sample_epoch
+    if trial_repeats is not None:
+        if trial_repeats.shape != (len(x), 4, *x.shape[1:]):
+            raise ValueError("Expected four raw trials for each training EEG row")
+        repeat_views = tensor(trial_repeats).sub_(mean).div_(std)
+        sample = sample_subset_epoch
+    elif repeat_views is not None:
         repeat_views = torch.as_tensor(repeat_views, device=DEVICE).sub(mean).div_(std)
     bank = ClassPrototypes(images, class_labels) if class_labels is not None else None
     if negatives is not None:
@@ -205,7 +216,7 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
         start = time.perf_counter()
         model.train()
         losses = torch.zeros((), device=DEVICE)
-        epoch_x = x if repeat_views is None else sample_epoch(x, repeat_views, seed, epoch)
+        epoch_x = x if repeat_views is None else sample(x, repeat_views, seed, epoch)
         if sources is not None and len(sources) > 1:
             selected = torch.as_tensor(source_indices(len(x), len(sources), seed, epoch), device=DEVICE)
             epoch_x = source_x[selected, image_rows]

@@ -2,7 +2,7 @@
 
 任务是在 200 个未见类别上用 EEG 检索图像。正式参考 `ab_pool4` 在 10 名被试、5 个种子上取得 Top-1 12.00%、Top-5 35.73%，课程参考线为 15.6% 和 42.8%。
 
-当前最佳正式结果来自第五轮联合损失模型加 CSLS。50 次正式评测的平均 Top-1 为 14.70%，Top-5 为 39.01%。[正式汇总](round-05/csls_replication/formal/summary.json) · [逐被试逐种子数据](round-05/csls_replication/formal/paired_runs.csv)
+当前最佳正式结果来自第六轮在线试次子集平均、联合损失与 CSLS。50 次正式评测的平均 Top-1 为 16.64%，Top-5 为 40.71%。[正式汇总](round-06/formal/summary.json) · [逐被试逐种子数据](round-06/formal/paired_runs.csv)
 
 三轮先导使用开发划分 2026。固定 Sub01、Sub02 的种子 0 和 Sub03、Sub04 的种子 1，每组条件共享查询、模板、训练预算和评分。先导门槛为相对 `ab_pool4` 的平均 Top-1 至少 +0.5 个百分点、至少三名被试的 Top-1 提升、平均 Top-5 持平或提高。
 
@@ -88,4 +88,24 @@ python eeg_gemini_iterations.py 5 --candidate ab_pool4_resproj_cosine --parent a
 
 ```powershell
 python eeg_csls_replication.py
+```
+
+## 第六轮 · 在线试次子集平均
+
+每个 epoch 对每张训练图等概率抽取 2、3 或 4 条 EEG 试次，无放回取样并求均值。网络保持 889,353 个参数，沿用第五轮的联合损失、温度 0.07 和 CSLS `k=10`。标准化、开发查询和 CSLS 训练库仍使用四次平均的 EEG。正式查询沿用官方平均 EEG 和 200 个固定类别模板。
+
+| 阶段 | 配对数 | 第五轮 Top-1 / Top-5 | 第六轮 Top-1 / Top-5 | 提升（百分点） |
+|---|---:|---:|---:|---:|
+| 2026 先导 | 4 | 8.275% / 25.275% | 9.075% / 26.800% | +0.800 / +1.525 |
+| 2027 独立复验 | 12 | 8.058% / 25.725% | 8.842% / 28.075% | +0.783 / +2.350 |
+| 正式评测 | 50 | 14.70% / 39.01% | 16.64% / 40.71% | +1.94 / +1.70 |
+
+正式评测中，十名被试的五种子平均 Top-1 均提高，八名被试的 Top-5 提高。Top-1 超过课程参考线 1.04 个百分点，Top-5 还差 2.09 个百分点。已逐条复算全部 10,000 次正式查询的排名。
+
+[复现代码](../../eeg_trial_augmentation.py) · [先导汇总](round-06/pilot/summary.json) · [复验汇总](round-06/replication/summary.json) · [正式协议](round-06/formal/protocol.json) · [正式汇总](round-06/formal/summary.json) · [正式配对数据](round-06/formal/paired_runs.csv)
+
+```powershell
+python eeg_trial_augmentation.py pilot
+python eeg_trial_augmentation.py replication
+python eeg_trial_augmentation.py formal
 ```
