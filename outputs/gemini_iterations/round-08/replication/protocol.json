@@ -1,0 +1,92 @@
+{
+  "candidate": "ab_pool4_resproj_cosine_transfer_trialaug",
+  "control": "ab_pool4_resproj_cosine_trialaug",
+  "control_stage": "gemini_iterations/round-06/replication",
+  "split_seed": 2027,
+  "pairs": [
+    [
+      5,
+      1
+    ],
+    [
+      5,
+      2
+    ],
+    [
+      6,
+      1
+    ],
+    [
+      6,
+      2
+    ],
+    [
+      7,
+      1
+    ],
+    [
+      7,
+      2
+    ],
+    [
+      8,
+      1
+    ],
+    [
+      8,
+      2
+    ],
+    [
+      9,
+      1
+    ],
+    [
+      9,
+      2
+    ],
+    [
+      10,
+      1
+    ],
+    [
+      10,
+      2
+    ]
+  ],
+  "training_classes": 1454,
+  "training_images": 14540,
+  "pretrain_subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "pretrain_epochs": 30,
+  "pretrain_sampling": "one visit per image per subject per epoch; shuffle subject-homogeneous batches",
+  "pretrain_lr": 0.0002,
+  "finetune_epochs": 30,
+  "finetune_lr": 5e-05,
+  "optimizer": "Adam; restart at fine-tuning",
+  "target_parameters": 889642,
+  "batch_size": 128,
+  "adapter": "one bias-free identity-initialized 17x17 matrix per subject; keep only the target adapter",
+  "temperature": 0.07,
+  "cosine_weight": 0.25,
+  "training_eeg": "uniform k in {2,3,4}; sample trials without replacement",
+  "csls_k": 10,
+  "calibration": "standard four-repeat training EEG from the target only",
+  "query": "1000 matched development queries and 200 fixed templates; standard four-repeat EEG",
+  "gate": "Top-5 >= +1.2pp and Top-1 >= 0pp for each seed; at least 4/6 subjects improve Top-5",
+  "official_test_used": false,
+  "pretrain_seeds": [
+    1,
+    2
+  ],
+  "pretrain_seed_matches_finetune_seed": true
+}

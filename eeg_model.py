@@ -11,6 +11,7 @@ PAIR_TEMPERATURE = 0.07
 MAX_LOGIT_SCALE = 100.0
 LEARNABLE_TEMPERATURE_CONFIG = "ab_pool4_resproj_learn_temp"
 COSINE_REGRESSION_CONFIG = "ab_pool4_resproj_cosine"
+TRANSFER_CONFIG = "ab_pool4_resproj_cosine_transfer"
 COSINE_REGRESSION_WEIGHT = 0.25
 SOFT_CLIP_WEIGHT = 0.30
 SOFT_CLIP_TEMPERATURE = 0.10
@@ -43,13 +44,14 @@ class ResidualPointwiseMixing(nn.Module):
 class EEGEncoder(nn.Module):
     """Encode a batch of standardized 17-electrode, 80-sample epochs."""
 
-    def __init__(self, config):
+    def __init__(self, config, *, adapter_count=1):
         super().__init__()
         overlap = config == "ab_pool8_stride4"
         learned = config == "ab_pool4_weighted"
         pointwise = config == "ab_pool4_pwmix"
         learn_temperature = config == LEARNABLE_TEMPERATURE_CONFIG
-        residual_projection = config in {"ab_pool4_resproj", COSINE_REGRESSION_CONFIG} or learn_temperature
+        transfer = config == TRANSFER_CONFIG
+        residual_projection = config in {"ab_pool4_resproj", COSINE_REGRESSION_CONFIG} or learn_temperature or transfer
         finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise or residual_projection
         if config == "b_pool4":
             config = "b"
@@ -110,7 +112,16 @@ class EEGEncoder(nn.Module):
         if learn_temperature:
             self.logit_scale = nn.Parameter(torch.tensor(math.log(1 / PAIR_TEMPERATURE)))
 
-    def forward(self, eeg):
+        self.electrode_adapters = None
+        if transfer:
+            with torch.random.fork_rng(devices=[]), torch.no_grad():
+                self.electrode_adapters = nn.ModuleList(nn.Linear(17, 17, bias=False) for _ in range(adapter_count))
+                for adapter in self.electrode_adapters:
+                    adapter.weight.copy_(torch.eye(17))
+
+    def forward(self, eeg, adapter_index=0):
+        if self.electrode_adapters is not None:
+            eeg = self.electrode_adapters[adapter_index](eeg.transpose(1, 2)).transpose(1, 2)
         signal = eeg.unsqueeze(1)
         if len(self.temporal) == 1:
             features = self.temporal[0](signal)

@@ -22,10 +22,10 @@ PROTOCOL = dict(model=MODEL, epochs_pretrain=40, epochs_finetune=100, lr=0.0002,
                 replication_folds=[[3,4],[5,6],[7,8],[9,10]], official_test_used=False)
 
 
-def fresh_split(design):
+def fresh_split(design, seed=2027, *, exclude=()):
     labels = design["train_labels"]
-    pool = np.setdiff1d(np.unique(labels), design["dev_classes"])
-    classes = np.sort(np.random.default_rng(2027).choice(pool, 200, replace=False))
+    pool = np.setdiff1d(np.unique(labels), np.union1d(design["dev_classes"], exclude))
+    classes = np.sort(np.random.default_rng(seed).choice(pool, 200, replace=False))
     rows = np.stack([np.flatnonzero(labels == c) for c in classes])
     support, query = rows[:, :5], rows[:, 5:]
     return dict(design, dev_classes=classes, dev_train=np.flatnonzero(~np.isin(labels, classes)),

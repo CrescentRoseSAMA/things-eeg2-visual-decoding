@@ -1,0 +1,5 @@
+subject,seed,candidate,control,queries,top1_hits,control_top1_hits,top1_pct,control_top1_pct,top1_delta_pp,top5_hits,control_top5_hits,top5_pct,control_top5_pct,top5_delta_pp,parameters,control_parameters,train_seconds,control_train_seconds,peak_gpu_mib,control_peak_gpu_mib
+1,0,ab_pool4_resproj_cosine_transfer_trialaug,ab_pool4_resproj_cosine_trialaug,1000,80,82,8.0,8.2,-0.2,265,261,26.5,26.1,0.4,889642,889353,48.83808860001227,135.82731939999485,734.03955078125,733.90869140625
+2,0,ab_pool4_resproj_cosine_transfer_trialaug,ab_pool4_resproj_cosine_trialaug,1000,88,98,8.8,9.8,-1.0,264,262,26.4,26.2,0.2,889642,889353,46.05903829999079,131.71878969999761,736.75341796875,743.12158203125
+3,1,ab_pool4_resproj_cosine_transfer_trialaug,ab_pool4_resproj_cosine_trialaug,1000,87,82,8.7,8.2,0.5,284,244,28.4,24.4,4.0,889642,889353,46.64222960000552,137.0010048999966,736.75341796875,742.49658203125
+4,1,ab_pool4_resproj_cosine_transfer_trialaug,ab_pool4_resproj_cosine_trialaug,1000,103,101,10.3,10.1,0.2,303,305,30.3,30.5,-0.2,889642,889353,47.59642090000489,135.49363119999725,736.75341796875,743.12158203125

@@ -1,0 +1,25 @@
+{
+  "runs": 4,
+  "candidate_pct": [
+    8.95,
+    27.9
+  ],
+  "control_pct": [
+    9.075,
+    26.8
+  ],
+  "delta_pp": [
+    -0.125,
+    1.1
+  ],
+  "top1_subject_wins": 2,
+  "positive_top1_seeds": [
+    1
+  ],
+  "parameters": 889642,
+  "top5_subject_wins": 3,
+  "gate_pass": false,
+  "official_test_used": false,
+  "shared_pretrain_seconds": 583.0926231000012,
+  "total_training_seconds": 772.2284005000147
+}

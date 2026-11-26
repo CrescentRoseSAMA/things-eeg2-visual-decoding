@@ -3,6 +3,7 @@ import unittest
 from eeg_trial_augmentation import gate
 from eeg_gemini_iterations import PILOT
 from eeg_csls_replication import PAIRS
+from eeg_transfer_pilot import replication_gate
 
 
 def rows_for(pairs, top1, top5):
@@ -12,6 +13,23 @@ def rows_for(pairs, top1, top5):
 
 
 class TrialAugmentationGateTest(unittest.TestCase):
+    def test_transfer_replication_gate_uses_both_seeds_and_four_subjects(self):
+        rows = rows_for(PAIRS, 0, 12)
+        self.assertTrue(replication_gate(rows))
+        with self.assertRaises(ValueError):
+            replication_gate(rows[:-1])
+        rows[0]["top5_hits"] -= 1
+        self.assertFalse(replication_gate(rows))
+        rows[0]["top5_hits"] += 1
+        rows[0]["top1_hits"] -= 1
+        rows[1]["top1_hits"] += 1
+        self.assertFalse(replication_gate(rows))
+        rows[0]["top1_hits"] += 1
+        rows[1]["top1_hits"] -= 1
+        for row in rows:
+            row["top5_hits"] = 230 + (24 if row["subject"] <= 7 else 0)
+        self.assertFalse(replication_gate(rows))
+
     def test_soft_clip_pilot_allows_exact_top1_tolerance(self):
         rows = rows_for(PILOT, -2, 10)
         self.assertTrue(gate("pilot", rows, soft_clip=True))

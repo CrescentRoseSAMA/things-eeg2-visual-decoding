@@ -14,7 +14,7 @@ import torch
 from eeg_data import load_design, load_subject
 from eeg_model import (COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT,
                        LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE,
-                       SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT, ClassPrototypes, EEGEncoder,
+                       SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT, TRANSFER_CONFIG, ClassPrototypes, EEGEncoder,
                        contrastive_loss, contrastive_temperature)
 from eeg_repeat_views import TRIAL_SAMPLING, sample_epoch, sample_subset_epoch
 
@@ -138,16 +138,16 @@ def source_indices(n_images, n_sources, seed, epoch):
 
 def train(config, subject, seed, stage, epochs, batch, design, *, split=None, class_labels=None,
           repeat_views=None, trial_repeats=None, sources=None, initial_checkpoint=None, snapshot_epochs=(),
-          negatives=None, soft_clip=False):
+          negatives=None, soft_clip=False, lr=LR):
     if trial_repeats is not None and (repeat_views is not None or sources is not None):
         raise ValueError("Trial subset augmentation requires within-subject raw trials only")
     folder = run_dir(stage, config, subject, seed)
     folder.mkdir(parents=True, exist_ok=True)
     settings = dict(config=config, subject=subject, seed=seed, stage=stage,
-                    epochs=epochs, batch_size=batch, lr=LR, temperature=PAIR_TEMPERATURE)
+                    epochs=epochs, batch_size=batch, lr=lr, temperature=PAIR_TEMPERATURE)
     if config == LEARNABLE_TEMPERATURE_CONFIG:
         settings.update(learnable_temperature=True, max_logit_scale=MAX_LOGIT_SCALE)
-    cosine_weight = COSINE_REGRESSION_WEIGHT if config == COSINE_REGRESSION_CONFIG else 0.0
+    cosine_weight = COSINE_REGRESSION_WEIGHT if config in (COSINE_REGRESSION_CONFIG, TRANSFER_CONFIG) else 0.0
     if cosine_weight:
         settings["cosine_regression_weight"] = cosine_weight
     if soft_clip:
@@ -195,7 +195,7 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
     model = model_for(config)
     if initial_checkpoint is not None:
         model.load_state_dict(torch.load(initial_checkpoint, map_location=DEVICE)["model"], strict=True)
-    opt = torch.optim.Adam(model.parameters(), lr=LR)
+    opt = torch.optim.Adam(model.parameters(), lr=lr)
     generator = torch.Generator(device=DEVICE).manual_seed(seed)
     resume = folder / "resume.pt"
     log_path = folder / "train.csv"

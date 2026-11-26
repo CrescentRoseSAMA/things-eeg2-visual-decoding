@@ -38,6 +38,8 @@ def design_for(split_seed):
         design = {k: cache[k] for k in keys}
     if split_seed == 2027:
         design = fresh_split(design)
+    elif split_seed == 2028:
+        design = fresh_split(design, 2028, exclude=fresh_split(design)["dev_classes"])
     rows, query, support = (design[k] for k in ("dev_train", "dev_query", "dev_support"))
     labels, heldout = design["train_labels"], design["dev_classes"]
     np.testing.assert_array_equal(np.sort(np.r_[rows, query, support]), np.arange(16540))

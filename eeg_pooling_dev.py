@@ -8,10 +8,10 @@ from eeg_train import (DEVICE, OUT, model_for, read_log, run_dir, save_json, sco
                        seed_run, tensor, train, write_log)
 
 
-def evaluate_checkpoint(config, subject, seed, design, eeg, centers, destination, stage="dev"):
+def evaluate_checkpoint(config, subject, seed, design, eeg, centers, destination, stage="dev", *, epochs=100):
     folder = run_dir(stage, config, subject, seed)
     ckpt = torch.load(folder / "checkpoint.pt", map_location=DEVICE)
-    assert ckpt["trained_epochs"] == 100
+    assert ckpt["trained_epochs"] == epochs
     model = model_for(config)
     model.load_state_dict(ckpt["model"], strict=True)
     scores = score(model, (eeg - ckpt["mean"]) / ckpt["std"], centers, 128).cpu().numpy()
@@ -22,7 +22,7 @@ def evaluate_checkpoint(config, subject, seed, design, eeg, centers, destination
     temp = destination.with_suffix(".tmp.npz")
     np.savez(temp, scores=scores, ranks=ranks, labels=design["dev_labels"], query_rows=design["dev_query"])
     temp.replace(destination)
-    row = dict(config=config, subject=subject, seed=seed, epochs=100, top1_pct=top1*100,
+    row = dict(config=config, subject=subject, seed=seed, epochs=epochs, top1_pct=top1*100,
                top5_pct=top5*100, parameters=sum(p.numel() for p in model.parameters()))
     return row, ckpt["mean"], ckpt["std"]
 

@@ -8,7 +8,7 @@ from eeg_data import CACHE, load_subject
 from eeg_evaluate import ranks_and_accuracy
 from eeg_gemini_iterations import (BASE, BATCH, COURSE, EPOCHS, REFERENCE, contrast,
                                    design_for, freeze, pairs_as_lists, read_development, result_row)
-from eeg_model import COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT, PAIR_TEMPERATURE
+from eeg_model import COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT, PAIR_TEMPERATURE, TRANSFER_CONFIG
 from eeg_pooling_dev import evaluate_checkpoint
 from eeg_pooling_formal import checked_metrics
 from eeg_train import (DEVICE, LR, OUT, load_json, model_for, read_log, reload_and_score,
@@ -43,23 +43,23 @@ def formal_gate(rows):
             and sum(r["top1_hits"] - r["control_top1_hits"] for r in comparisons[NORMALIZED]) > 0)
 
 
-def training_stats(folder, config, subject, seed):
+def training_stats(folder, config, subject, seed, *, epochs=EPOCHS, lr=LR):
     stats = load_json(folder / "training.json")
-    expected = (config, subject, seed, EPOCHS, BATCH, LR, PAIR_TEMPERATURE)
+    expected = (config, subject, seed, epochs, BATCH, lr, PAIR_TEMPERATURE)
     actual = tuple(stats[k] for k in ("config", "subject", "seed", "trained_epochs", "batch_size",
                                       "lr", "temperature"))
     if actual != expected or [int(row["epoch"]) for row in read_log(folder / "train.csv")] != list(
-            range(1, EPOCHS + 1)):
+            range(1, epochs + 1)):
         raise ValueError(f"Unexpected checkpoint training settings: {folder}")
-    if config == CANDIDATE and stats.get("cosine_regression_weight") != COSINE_REGRESSION_WEIGHT:
+    if config in (CANDIDATE, TRANSFER_CONFIG) and stats.get("cosine_regression_weight") != COSINE_REGRESSION_WEIGHT:
         raise ValueError(f"Unexpected cosine regression weight: {folder}")
     return stats
 
 
-def scoring_arms(folder, raw, labels, templates, training_eeg, *, destination=None):
+def scoring_arms(folder, raw, labels, templates, training_eeg, *, destination=None, model_config=CANDIDATE):
     """Compare three scores for one fixed checkpoint and persist sample-level evidence."""
     ckpt = torch.load(folder / "checkpoint.pt", map_location=DEVICE)
-    model = model_for(CANDIDATE)
+    model = model_for(model_config)
     model.load_state_dict(ckpt["model"], strict=True)
     inputs = (tensor(training_eeg) - ckpt["mean"]) / ckpt["std"]
     bank = score(model, inputs, tensor(templates), BATCH).cpu().numpy()

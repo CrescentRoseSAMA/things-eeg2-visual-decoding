@@ -121,3 +121,58 @@ python eeg_trial_augmentation.py formal
 ```powershell
 python eeg_trial_augmentation.py pilot --soft-clip
 ```
+
+## 第八轮 · 跨被试预训练和目标被试微调
+
+在 2026 开发划分的同一批训练类上用 10 名被试共同预训练 30 轮，每批取一名被试的数据。每名被试使用单位阵初始化的 `17×17` 电极适配器。四组目标被试与种子配对共享一次种子 0 的预训练，各自再微调 30 轮。保留第六轮的在线试次增强、联合损失、冻结 CLIP 和 CSLS `k=10`，CSLS 校正库仅使用目标被试的标准平均训练 EEG。
+
+先导 Top-1 为 8.950%，Top-5 为 27.900%，较第六轮变化 −0.125 和 +1.100 个百分点。三名被试的 Top-5 提升，44 次新增前五命中中有 40 次来自 Sub03。Top-1 未达到持平门槛，本轮止于先导。共享预训练耗时 583 秒，峰值分配显存 2,084 MiB，加四组微调的训练总耗时为 772 秒。
+
+[模型](../../eeg_model.py) · [复现代码](../../eeg_transfer_pilot.py) · [先导协议](round-08/pilot/protocol.json) · [预训练汇总](round-08/pilot/pretrain/summary.json) · [先导汇总](round-08/pilot/summary.json) · [配对数据](round-08/pilot/paired_runs.csv)
+
+```powershell
+python eeg_transfer_pilot.py
+```
+
+固定开发划分、微调种子和推进门槛，将共享预训练种子换为 1 重跑。第六轮的配对对照为 9.075% / 26.800%。
+
+| 共享预训练种子 | Top-1 | Top-5 | 相对第六轮（百分点） | Top-5 提升被试 | 先导判定 |
+|---|---:|---:|---:|---:|---|
+| 0 | 8.950% | 27.900% | −0.125 / +1.100 | 3/4 | 未达标 |
+| 1 | 9.625% | 28.375% | +0.550 / +1.575 | 3/4 | 达标 |
+
+两个预训练种子下，Sub01–03 的 Top-5 都提升，Sub04 略降，Sub02 的 Top-1 都下降。种子 1 的训练耗时 786 秒。两组先导沿用同一批开发查询。
+
+[种子 1 协议](round-08/pilot-seed-1/protocol.json) · [预训练汇总](round-08/pilot-seed-1/pretrain/summary.json) · [先导汇总](round-08/pilot-seed-1/summary.json) · [配对数据](round-08/pilot-seed-1/paired_runs.csv)
+
+```powershell
+python eeg_transfer_pilot.py --pretrain-seed 1
+```
+
+### 2027 独立复验
+
+在与 2026 验证类别不重叠的开发划分上，从头训练两份共享权重（种子 1、2），再微调 Sub05–Sub10 的 12 组配对。第八轮为 8.650% / 27.792%，第六轮对照为 8.842% / 28.075%，差值为 −0.192 / −0.283 个百分点。种子 1、2 的平均 Top-1 分别变化 −0.417 和 +0.033 个百分点，只有 Sub05 和 Sub09 的两种子平均 Top-5 提升。未达到正式评测门槛，未使用正式测试集。两次预训练和 12 次微调合计 1,767 秒。
+
+[复验协议](round-08/replication/protocol.json) · [复验汇总](round-08/replication/summary.json) · [逐被试逐种子数据](round-08/replication/paired_runs.csv) · [预训练种子 1](round-08/replication/pretrain/seed-1/summary.json) · [预训练种子 2](round-08/replication/pretrain/seed-2/summary.json)
+
+```powershell
+python eeg_transfer_pilot.py --replication
+```
+
+## 第九轮 · 固定 50:50 的 CSLS 分数融合
+
+2028 划分从前两轮均未用作验证的类别中抽取 200 类。Sub05–Sub10、种子 1 和 2 的模型都在新训练划分上重训，使用相同的 1,000 条验证查询。两套融合均先各自计算 CSLS `k=10`，再等权平均分数并排序。第六轮双种子融合每名被试只生成一组排名，分别对照该被试两份单模型结果。
+
+| 方案 | Top-1 | Top-5 | 相对第六轮单模型（百分点） | Top-5 提升被试 |
+|---|---:|---:|---:|---:|
+| 第六轮单模型 | 9.200% | 27.783% | — | — |
+| 第六轮双种子融合 | 9.583% | 28.717% | +0.383 / +0.933 | 6/6 |
+| 第六轮与第八轮融合 | 10.575% | 30.192% | +1.375 / +2.408 | 6/6 |
+
+混合融合达到开发集门槛，且相对双种子融合提高 Top-1 0.992、Top-5 1.475 个百分点。双种子融合的 Top-5 增幅低于 1.5 个百分点门槛。课程要求每名被试分别训练和测试。含跨被试共享预训练的混合融合单列为探索结果。全程只用开发集，训练合计 3,481 秒。
+
+[复现代码](../../eeg_score_fusion.py) · [协议](round-09/development/protocol.json) · [汇总](round-09/development/summary.json) · [配对数据](round-09/development/paired_runs.csv)
+
+```powershell
+python eeg_score_fusion.py
+```
