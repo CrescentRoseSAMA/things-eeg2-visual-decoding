@@ -12,6 +12,18 @@ def rows_for(pairs, top1, top5):
 
 
 class TrialAugmentationGateTest(unittest.TestCase):
+    def test_soft_clip_pilot_allows_exact_top1_tolerance(self):
+        rows = rows_for(PILOT, -2, 10)
+        self.assertTrue(gate("pilot", rows, soft_clip=True))
+        rows[0]["top1_hits"] -= 1
+        self.assertFalse(gate("pilot", rows, soft_clip=True))
+        rows[0]["top1_hits"] += 1
+        rows[-1]["top5_hits"] -= 1
+        self.assertFalse(gate("pilot", rows, soft_clip=True))
+        for row, gain in zip(rows, (20, 20, 0, 0), strict=True):
+            row["top5_hits"] = 230 + gain
+        self.assertFalse(gate("pilot", rows, soft_clip=True))
+
     def test_pilot_allows_zero_top1_gain_and_requires_complete_pairs(self):
         rows = rows_for(PILOT, 0, 10)
         self.assertTrue(gate("pilot", rows))

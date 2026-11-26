@@ -10,7 +10,7 @@ from eeg_data import CACHE, load_subject
 from eeg_evaluate import ranks_and_accuracy
 from eeg_gemini_iterations import (BASE, BATCH, COURSE, EPOCHS, PILOT, contrast, design_for,
                                    freeze, pairs_as_lists, read_development, result_row)
-from eeg_model import COSINE_REGRESSION_WEIGHT, PAIR_TEMPERATURE
+from eeg_model import COSINE_REGRESSION_WEIGHT, PAIR_TEMPERATURE, SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT
 from eeg_pooling_dev import evaluate_checkpoint
 from eeg_pooling_formal import checked_metrics
 from eeg_repeat_experiment import raw_trials
@@ -20,6 +20,7 @@ from eeg_train import DEVICE, LR, OUT, load_json, reload_and_score, run_dir, sav
 
 OUTPUT = BASE / "round-06"
 CANDIDATE_ARM = f"{CANDIDATE}_trialaug"
+SOFT_CLIP_ARM = f"{CANDIDATE_ARM}_softclip"
 
 
 def gains(rows, metric):
@@ -31,7 +32,7 @@ def top5_wins(rows):
     return sum(gains([row for row in rows if row["subject"] == subject], 5) > 0 for subject in subjects)
 
 
-def gate(stage, rows):
+def gate(stage, rows, *, soft_clip=False):
     pairs = PILOT if stage == "pilot" else PAIRS
     if sorted((row["subject"], row["seed"]) for row in rows) != list(pairs) or any(
             row["queries"] != 1000 for row in rows):
@@ -40,7 +41,8 @@ def gate(stage, rows):
     if 100 * gains(rows, 5) < n:
         return False
     if stage == "pilot":
-        return gains(rows, 1) >= 0 and top5_wins(rows) >= 3
+        minimum = -n if soft_clip else 0
+        return 500 * gains(rows, 1) >= minimum and top5_wins(rows) >= 3
     return (500 * gains(rows, 1) >= n and top5_wins(rows) >= 4
             and all(gains([row for row in rows if row["seed"] == seed], 1) >= 0 for seed in (1, 2)))
 
@@ -68,11 +70,19 @@ def protocol_for(pairs):
                 official_test_used=False)
 
 
-def checkpoint_stats(candidate, reference, subject, seed):
+def checkpoint_stats(candidate, reference, subject, seed, *, soft_clip=False):
     new = training_stats(candidate, CANDIDATE, subject, seed)
     old = training_stats(reference, CANDIDATE, subject, seed)
-    if (new.get("training_eeg") != TRIAL_SAMPLING or "training_eeg" in old
-            or new["parameters"] != old["parameters"]):
+    if new["parameters"] != old["parameters"] or new.get("training_eeg") != TRIAL_SAMPLING:
+        raise ValueError("Expected matching parameter counts and candidate trial augmentation")
+    if soft_clip:
+        if (old.get("training_eeg") != TRIAL_SAMPLING or new["parameters"] != 889353
+                or new.get("soft_clip_weight") != SOFT_CLIP_WEIGHT
+                or new.get("soft_clip_temperature") != SOFT_CLIP_TEMPERATURE
+                or "soft_clip_weight" in old or "soft_clip_temperature" in old):
+            raise ValueError("Expected only EEG-to-image CLIP targets to differ from round 06")
+        return {SOFT_CLIP_ARM: new, CANDIDATE_ARM: old}
+    if "training_eeg" in old:
         raise ValueError("Expected a trial-only difference from the reference")
     return {CANDIDATE_ARM: new, ADJUSTED: old}
 
@@ -88,13 +98,25 @@ def stored_csls(path, labels):
         return ranks
 
 
-def run_development(name, pairs, split_seed):
-    directory = OUTPUT / name
+def run_development(name, pairs, split_seed, *, soft_clip=False):
+    directory = (BASE / "round-07" if soft_clip else OUTPUT) / name
     stage = directory.relative_to(OUT).as_posix()
-    reference_stage = (BASE / "round-05" if name == "pilot" else DIRECTORY).relative_to(OUT).as_posix()
+    reference_dir = BASE / "round-05" if name == "pilot" else DIRECTORY
+    candidate_arm, control_arm = CANDIDATE_ARM, ADJUSTED
+    protocol = protocol_for(pairs)
     decision = ("Top-5 >= +1pp and Top-1 >= 0pp; at least 3/4 subjects improve Top-5" if name == "pilot" else
                 "Top-5 >= +1pp and Top-1 >= +0.2pp; both seeds nonnegative Top-1; at least 4/6 improve Top-5")
-    freeze(directory / "protocol.json", dict(protocol_for(pairs), split_seed=split_seed, gate=decision,
+    if soft_clip:
+        reference_dir = OUTPUT / name
+        candidate_arm, control_arm = SOFT_CLIP_ARM, CANDIDATE_ARM
+        decision = "Top-5 >= +1pp and Top-1 >= -0.2pp; at least 3/4 subjects improve Top-5"
+        protocol.update(candidate=candidate_arm, reference=control_arm,
+                        reference_stage=reference_dir.relative_to(OUT).as_posix(),
+                        soft_clip_weight=SOFT_CLIP_WEIGHT, soft_clip_temperature=SOFT_CLIP_TEMPERATURE,
+                        eeg_to_image_targets="0.70 I + 0.30 softmax(normalized CLIP cosine / 0.10) by row",
+                        image_to_eeg_targets="hard paired labels", optimizer="Adam", parameters=889353)
+    reference_stage = reference_dir.relative_to(OUT).as_posix()
+    freeze(directory / "protocol.json", dict(protocol, split_seed=split_seed, gate=decision,
            query="standard four-repeat average, fixed 200 templates and 1000 queries"))
     design = design_for(split_seed)
     indices, templates, labels = (design[key] for key in ("dev_train", "dev_centers", "dev_labels"))
@@ -108,10 +130,11 @@ def run_development(name, pairs, split_seed):
             del repeats
             repeats = checked_trials(subject, indices, full)
             last_subject = subject
-        train(CANDIDATE, subject, seed, stage, EPOCHS, BATCH, design, split="dev", trial_repeats=repeats)
+        train(CANDIDATE, subject, seed, stage, EPOCHS, BATCH, design, split="dev", trial_repeats=repeats,
+              soft_clip=soft_clip)
         candidate = run_dir(stage, CANDIDATE, subject, seed)
         reference = run_dir(reference_stage, CANDIDATE, subject, seed)
-        stats = checkpoint_stats(candidate, reference, subject, seed)
+        stats = checkpoint_stats(candidate, reference, subject, seed, soft_clip=soft_clip)
         candidate_val, reference_val = candidate / "validation.npz", reference / "validation.npz"
         query = tensor(full[design["dev_query"]])
         _, mean, std = evaluate_checkpoint(CANDIDATE, subject, seed, design, query, centers, candidate_val, stage)
@@ -124,14 +147,14 @@ def run_development(name, pairs, split_seed):
         with np.load(candidate_val) as saved:
             scores = scoring_arms(candidate, saved["scores"], labels, templates, train_eeg)
         np.testing.assert_array_equal(raw_ranks, scores[CANDIDATE])
-        if name == "pilot":
+        if name == "pilot" and not soft_clip:
             with np.load(reference_val) as saved:
                 old = scoring_arms(reference, saved["scores"], labels, templates, train_eeg,
                                    destination=candidate / "reference_csls.npz")[ADJUSTED]
         else:
             old = stored_csls(reference / "csls.npz", labels)
-        rows.append(result_row(subject, seed, CANDIDATE_ARM, ADJUSTED, scores[ADJUSTED], old, stats))
-    passed = gate(name, rows)
+        rows.append(result_row(subject, seed, candidate_arm, control_arm, scores[ADJUSTED], old, stats))
+    passed = gate(name, rows, soft_clip=soft_clip)
     summarize(directory, rows, gate_pass=passed, official_test_used=False)
     return passed
 
@@ -188,11 +211,15 @@ def run_formal():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("stage", choices=("pilot", "replication", "formal"))
-    stage = parser.parse_args().stage
+    parser.add_argument("--soft-clip", action="store_true", help="run the round-07 pilot")
+    args = parser.parse_args()
+    stage = args.stage
+    if args.soft_clip and stage != "pilot":
+        parser.error("--soft-clip is available only for the pilot")
     if DEVICE.type != "cuda":
         raise RuntimeError("CUDA device unavailable")
     if stage == "pilot":
-        run_development("pilot", PILOT, 2026)
+        run_development("pilot", PILOT, 2026, soft_clip=args.soft_clip)
     elif stage == "replication":
         if not load_json(OUTPUT / "pilot" / "summary.json")["gate_pass"]:
             raise RuntimeError("The pilot gate did not pass")

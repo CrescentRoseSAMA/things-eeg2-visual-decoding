@@ -14,7 +14,8 @@ import torch
 from eeg_data import load_design, load_subject
 from eeg_model import (COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT,
                        LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE,
-                       ClassPrototypes, EEGEncoder, contrastive_loss, contrastive_temperature)
+                       SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT, ClassPrototypes, EEGEncoder,
+                       contrastive_loss, contrastive_temperature)
 from eeg_repeat_views import TRIAL_SAMPLING, sample_epoch, sample_subset_epoch
 
 
@@ -137,7 +138,7 @@ def source_indices(n_images, n_sources, seed, epoch):
 
 def train(config, subject, seed, stage, epochs, batch, design, *, split=None, class_labels=None,
           repeat_views=None, trial_repeats=None, sources=None, initial_checkpoint=None, snapshot_epochs=(),
-          negatives=None):
+          negatives=None, soft_clip=False):
     if trial_repeats is not None and (repeat_views is not None or sources is not None):
         raise ValueError("Trial subset augmentation requires within-subject raw trials only")
     folder = run_dir(stage, config, subject, seed)
@@ -149,6 +150,8 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
     cosine_weight = COSINE_REGRESSION_WEIGHT if config == COSINE_REGRESSION_CONFIG else 0.0
     if cosine_weight:
         settings["cosine_regression_weight"] = cosine_weight
+    if soft_clip:
+        settings.update(soft_clip_weight=SOFT_CLIP_WEIGHT, soft_clip_temperature=SOFT_CLIP_TEMPERATURE)
     if split is not None:
         settings["split"] = split
     if snapshot_epochs:
@@ -230,7 +233,7 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
             paired = images[ids]
             extra = None if negatives is None else negative_images[extra_rows[ids]]
             loss = contrastive_loss(emb, paired, extra, logit_scale=model.logit_scale,
-                                    cosine_weight=cosine_weight)
+                                    cosine_weight=cosine_weight, soft_clip=soft_clip)
             if bank is not None:
                 loss = 0.75 * loss + 0.25 * bank.loss(emb, paired, ids)
             loss.backward()

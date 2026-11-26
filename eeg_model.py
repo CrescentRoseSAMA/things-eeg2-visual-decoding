@@ -12,6 +12,8 @@ MAX_LOGIT_SCALE = 100.0
 LEARNABLE_TEMPERATURE_CONFIG = "ab_pool4_resproj_learn_temp"
 COSINE_REGRESSION_CONFIG = "ab_pool4_resproj_cosine"
 COSINE_REGRESSION_WEIGHT = 0.25
+SOFT_CLIP_WEIGHT = 0.30
+SOFT_CLIP_TEMPERATURE = 0.10
 
 
 class WeightedTimePool(nn.Module):
@@ -130,7 +132,8 @@ def contrastive_temperature(logit_scale):
     return logit_scale.exp().clamp(max=MAX_LOGIT_SCALE).reciprocal()
 
 
-def contrastive_loss(eeg_normalized, image, extra_images=None, *, logit_scale=None, cosine_weight=0.0):
+def contrastive_loss(eeg_normalized, image, extra_images=None, *, logit_scale=None, cosine_weight=0.0,
+                     soft_clip=False):
     """Symmetric InfoNCE with an optional cosine loss on the matched pairs."""
     temperature = contrastive_temperature(logit_scale)
     images_normalized = F.normalize(image, dim=1)
@@ -141,7 +144,15 @@ def contrastive_loss(eeg_normalized, image, extra_images=None, *, logit_scale=No
     if extra_images is not None:
         extra = torch.bmm(extra_images, eeg_normalized.unsqueeze(2)).squeeze(2) / temperature
         forward_logits = torch.cat((logits, extra), dim=1)
-    loss = (F.cross_entropy(forward_logits, targets) + F.cross_entropy(logits.T, targets)) / 2
+    forward_loss = F.cross_entropy(forward_logits, targets)
+    if soft_clip:
+        with torch.no_grad():
+            image_logits = images_normalized @ images_normalized.T / SOFT_CLIP_TEMPERATURE
+            image_targets = image_logits.softmax(dim=1)
+        forward_log_prob = forward_logits.log_softmax(dim=1)[:, :len(logits)]
+        soft_loss = -(image_targets * forward_log_prob).sum(dim=1).mean()
+        forward_loss = (1 - SOFT_CLIP_WEIGHT) * forward_loss + SOFT_CLIP_WEIGHT * soft_loss
+    loss = (forward_loss + F.cross_entropy(logits.T, targets)) / 2
     if cosine_weight:
         return (1 - cosine_weight) * loss + cosine_weight * (1 - similarities.diagonal().mean())
     return loss

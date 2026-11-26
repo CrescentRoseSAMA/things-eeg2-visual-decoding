@@ -109,3 +109,15 @@ python eeg_trial_augmentation.py pilot
 python eeg_trial_augmentation.py replication
 python eeg_trial_augmentation.py formal
 ```
+
+## 第七轮 · 单向 CLIP 软目标
+
+沿用第六轮的在线试次子集平均、889,353 参数编码器、联合损失和 CSLS `k=10`。仅将 EEG→图像方向的目标改为 70% 配对硬标签和 30% 批内 CLIP 图像余弦相似度分布，教师温度为 0.10。反向仍用配对硬标签。
+
+四组开发集配对的平均 Top-1 为 8.825%，Top-5 为 26.875%，相对第六轮分别变化 −0.250 和 +0.075 个百分点。两名被试的 Top-5 提升，未达到预设的三项先导门槛。本轮止于开发集先导。
+
+[损失](../../eeg_model.py) · [训练](../../eeg_train.py) · [实验入口](../../eeg_trial_augmentation.py) · [先导协议](round-07/pilot/protocol.json) · [先导汇总](round-07/pilot/summary.json) · [配对数据](round-07/pilot/paired_runs.csv)
+
+```powershell
+python eeg_trial_augmentation.py pilot --soft-clip
+```

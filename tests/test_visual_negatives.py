@@ -9,6 +9,20 @@ from eeg_visual_negatives import ImageNegatives, neighbors
 
 
 class VisualNegativesTest(unittest.TestCase):
+    def test_clip_targets_only_soften_eeg_to_image(self):
+        eeg = F.normalize(torch.tensor([[1., 0.], [.6, .4], [0., 1.]]), dim=1).requires_grad_()
+        images = F.normalize(torch.tensor([[2., 1.], [3., 1.], [0., 4.]]), dim=1)
+        similarities = eeg @ images.T
+        logits = similarities / .07
+        targets = .7 * torch.eye(3) + .3 * (images @ images.T / .10).softmax(dim=1)
+        forward = -(targets * logits.log_softmax(dim=1)).sum(1).mean()
+        reverse = F.cross_entropy(logits.T, torch.arange(3))
+        expected = .75 * (forward + reverse) / 2 + .25 * (1 - similarities.diag().mean())
+
+        actual = contrastive_loss(eeg, images, cosine_weight=.25, soft_clip=True)
+        torch.testing.assert_close(actual, expected)
+        torch.testing.assert_close(torch.autograd.grad(actual, eeg)[0], torch.autograd.grad(expected, eeg)[0])
+
     def test_distinct_eligible_nearby_classes_and_epoch_replay(self):
         rng = np.random.default_rng(13)
         labels = np.tile(np.arange(50), 10)
