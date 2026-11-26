@@ -1,0 +1,121 @@
+{
+  "runs": 50,
+  "official_test_used": true,
+  "csls_k": 10,
+  "mean_pct": [
+    14.7,
+    39.010000000000005
+  ],
+  "seed_sd_pp": [
+    0.6393355926272211,
+    0.3895510236156493
+  ],
+  "delta_vs_course_pp": [
+    -0.9000000000000004,
+    -3.789999999999992
+  ],
+  "comparisons": {
+    "ab_pool4_resproj_cosine_vs_ab_pool4": {
+      "runs": 50,
+      "candidate_pct": [
+        12.89,
+        37.0
+      ],
+      "control_pct": [
+        12.0,
+        35.73
+      ],
+      "delta_pp": [
+        0.89,
+        1.27
+      ],
+      "top1_subject_wins": 8,
+      "positive_top1_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "parameters": 889353,
+      "pilot_pass": true,
+      "formal_gate_pass": false
+    },
+    "round05_cosine_normalized_vs_ab_pool4_resproj_cosine": {
+      "runs": 50,
+      "candidate_pct": [
+        12.98,
+        37.21
+      ],
+      "control_pct": [
+        12.89,
+        37.0
+      ],
+      "delta_pp": [
+        0.09,
+        0.21
+      ],
+      "top1_subject_wins": 6,
+      "positive_top1_seeds": [
+        2,
+        3,
+        4
+      ],
+      "parameters": 889353,
+      "pilot_pass": false,
+      "formal_gate_pass": false
+    },
+    "round05_cosine_csls_vs_round05_cosine_normalized": {
+      "runs": 50,
+      "candidate_pct": [
+        14.7,
+        39.01
+      ],
+      "control_pct": [
+        12.98,
+        37.21
+      ],
+      "delta_pp": [
+        1.72,
+        1.8
+      ],
+      "top1_subject_wins": 10,
+      "positive_top1_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "parameters": 889353,
+      "pilot_pass": true,
+      "formal_gate_pass": false
+    },
+    "round05_cosine_csls_vs_ab_pool4": {
+      "runs": 50,
+      "candidate_pct": [
+        14.7,
+        39.01
+      ],
+      "control_pct": [
+        12.0,
+        35.73
+      ],
+      "delta_pp": [
+        2.7,
+        3.28
+      ],
+      "top1_subject_wins": 8,
+      "positive_top1_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "parameters": 889353,
+      "pilot_pass": true,
+      "formal_gate_pass": false
+    }
+  }
+}

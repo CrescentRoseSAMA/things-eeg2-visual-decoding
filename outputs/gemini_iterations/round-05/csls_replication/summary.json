@@ -1,0 +1,101 @@
+{
+  "pairs": 12,
+  "training_runs": 24,
+  "official_test_used": false,
+  "csls_k": 10,
+  "comparisons": {
+    "ab_pool4_resproj_cosine_vs_ab_pool4": {
+      "runs": 12,
+      "candidate_pct": [
+        7.641666666666667,
+        25.516666666666666
+      ],
+      "control_pct": [
+        6.883333333333334,
+        23.433333333333334
+      ],
+      "delta_pp": [
+        0.7583333333333333,
+        2.0833333333333335
+      ],
+      "top1_subject_wins": 5,
+      "positive_top1_seeds": [
+        1,
+        2
+      ],
+      "parameters": 889353,
+      "pilot_pass": true,
+      "formal_gate_pass": false
+    },
+    "round05_cosine_normalized_vs_ab_pool4_resproj_cosine": {
+      "runs": 12,
+      "candidate_pct": [
+        7.775,
+        25.875
+      ],
+      "control_pct": [
+        7.641666666666667,
+        25.516666666666666
+      ],
+      "delta_pp": [
+        0.13333333333333333,
+        0.35833333333333334
+      ],
+      "top1_subject_wins": 3,
+      "positive_top1_seeds": [
+        1,
+        2
+      ],
+      "parameters": 889353,
+      "pilot_pass": false,
+      "formal_gate_pass": false
+    },
+    "round05_cosine_csls_vs_round05_cosine_normalized": {
+      "runs": 12,
+      "candidate_pct": [
+        8.058333333333334,
+        25.725
+      ],
+      "control_pct": [
+        7.775,
+        25.875
+      ],
+      "delta_pp": [
+        0.2833333333333333,
+        -0.15
+      ],
+      "top1_subject_wins": 5,
+      "positive_top1_seeds": [
+        1,
+        2
+      ],
+      "parameters": 889353,
+      "pilot_pass": false,
+      "formal_gate_pass": false
+    },
+    "round05_cosine_csls_vs_ab_pool4": {
+      "runs": 12,
+      "candidate_pct": [
+        8.058333333333334,
+        25.725
+      ],
+      "control_pct": [
+        6.883333333333334,
+        23.433333333333334
+      ],
+      "delta_pp": [
+        1.175,
+        2.2916666666666665
+      ],
+      "top1_subject_wins": 5,
+      "positive_top1_seeds": [
+        1,
+        2
+      ],
+      "parameters": 889353,
+      "pilot_pass": true,
+      "formal_gate_pass": true
+    }
+  },
+  "formal_gate_pass": true
+}

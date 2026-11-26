@@ -2,6 +2,8 @@
 
 任务是在 200 个未见类别上用 EEG 检索图像。正式参考 `ab_pool4` 在 10 名被试、5 个种子上取得 Top-1 12.00%、Top-5 35.73%，课程参考线为 15.6% 和 42.8%。
 
+当前最佳正式结果来自第五轮联合损失模型加 CSLS。50 次正式评测的平均 Top-1 为 14.70%，Top-5 为 39.01%。[正式汇总](round-05/csls_replication/formal/summary.json) · [逐被试逐种子数据](round-05/csls_replication/formal/paired_runs.csv)
+
 三轮先导使用开发划分 2026。固定 Sub01、Sub02 的种子 0 和 Sub03、Sub04 的种子 1，每组条件共享查询、模板、训练预算和评分。先导门槛为相对 `ab_pool4` 的平均 Top-1 至少 +0.5 个百分点、至少三名被试的 Top-1 提升、平均 Top-5 持平或提高。
 
 ## 第一轮 · 四点池化下的多尺度对照
@@ -67,4 +69,23 @@ python eeg_gemini_iterations.py 4 --candidate ab_pool4_resproj_learn_temp --pare
 
 ```powershell
 python eeg_gemini_iterations.py 5 --candidate ab_pool4_resproj_cosine --parent ab_pool4_resproj --hypothesis "Matched-pair cosine regression at weight 0.25 added to symmetric InfoNCE with fixed 0.07 temperature"
+```
+
+## 第五轮续 · CSLS 独立复验与正式评测
+
+固定 `k=10`，以对应被试的训练 EEG 估计模板校正项。开发复验使用类别划分 2027、Sub05–Sub10 和种子 1、2，两套模型共从头训练 24 次。候选加 CSLS 后，相对原版 Top-1 和 Top-5 分别提高 1.175 和 2.292 个百分点，两个种子的平均 Top-1 都提高，六名被试中五名的 Top-1 提高。相对同一权重仅归一化模板，CSLS 的 Top-1 提高 0.283 个百分点，达到正式评测门槛。
+
+| 正式评分方式 | Top-1 | Top-5 |
+|---|---:|---:|
+| 原版 `ab_pool4` 点积 | 12.00% | 35.73% |
+| 联合损失模型点积 | 12.89% | 37.00% |
+| 联合损失模型，仅归一化模板 | 12.98% | 37.21% |
+| 联合损失模型，余弦 CSLS | 14.70% | 39.01% |
+
+正式阶段用全部官方训练类训练 50 份权重，全部训练结束后统一打分。较原版，CSLS 方案提高 2.70 和 3.28 个百分点，距离课程两项目标分别差 0.90 和 3.79 个百分点。归一化、点积和 CSLS 三种评分共享同一模型权重。相对仅归一化，CSLS 提升 1.72 和 1.80 个百分点，十名被试的平均 Top-1 都提高。
+
+[复现代码](../../eeg_csls_replication.py) · [复验协议](round-05/csls_replication/protocol.json) · [复验汇总](round-05/csls_replication/summary.json) · [复验配对数据](round-05/csls_replication/paired_runs.csv) · [正式协议](round-05/csls_replication/formal/protocol.json) · [正式汇总](round-05/csls_replication/formal/summary.json) · [正式配对数据](round-05/csls_replication/formal/paired_runs.csv)
+
+```powershell
+python eeg_csls_replication.py
 ```

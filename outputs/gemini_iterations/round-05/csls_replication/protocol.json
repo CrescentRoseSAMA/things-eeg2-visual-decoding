@@ -1,0 +1,84 @@
+{
+  "candidate": "ab_pool4_resproj_cosine",
+  "reference": "ab_pool4",
+  "scoring_comparisons": [
+    [
+      "ab_pool4_resproj_cosine",
+      "ab_pool4"
+    ],
+    [
+      "round05_cosine_normalized",
+      "ab_pool4_resproj_cosine"
+    ],
+    [
+      "round05_cosine_csls",
+      "round05_cosine_normalized"
+    ],
+    [
+      "round05_cosine_csls",
+      "ab_pool4"
+    ]
+  ],
+  "pairs": [
+    [
+      5,
+      1
+    ],
+    [
+      5,
+      2
+    ],
+    [
+      6,
+      1
+    ],
+    [
+      6,
+      2
+    ],
+    [
+      7,
+      1
+    ],
+    [
+      7,
+      2
+    ],
+    [
+      8,
+      1
+    ],
+    [
+      8,
+      2
+    ],
+    [
+      9,
+      1
+    ],
+    [
+      9,
+      2
+    ],
+    [
+      10,
+      1
+    ],
+    [
+      10,
+      2
+    ]
+  ],
+  "split_seed": 2027,
+  "epochs": 100,
+  "batch_size": 128,
+  "learning_rate": 0.0002,
+  "temperature": 0.07,
+  "cosine_weight": 0.25,
+  "initialization": "train both encoders from scratch for each pair",
+  "scoring": "epoch 100; normalized template cosine and CSLS use identical round-05 checkpoint",
+  "csls_k": 10,
+  "calibration": "14540 training EEG rows per corresponding subject and split",
+  "gate": "CSLS vs ab_pool4: mean Top-1 >= +1pp, mean Top-5 >= +2pp, both seeds positive Top-1, at least four positive subjects; CSLS mean Top-1 > normalization only",
+  "official_test_used": false
+}
