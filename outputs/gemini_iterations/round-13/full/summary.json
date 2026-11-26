@@ -1,0 +1,36 @@
+{
+  "runs": 50,
+  "candidate_pct": [
+    17.44,
+    42.43
+  ],
+  "control_pct": [
+    16.64,
+    40.71
+  ],
+  "delta_pp": [
+    0.8,
+    1.72
+  ],
+  "top1_subject_wins": 7,
+  "positive_top1_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "parameters": 889353,
+  "top5_subject_wins": 10,
+  "new_fits": 0,
+  "official_test_used": true,
+  "pilot_gate_pass": false,
+  "seed_sd_pp": [
+    0.38470768123342697,
+    0.0836660026534062
+  ],
+  "delta_vs_course_pp": [
+    1.839999999999998,
+    -0.36999999999999034
+  ]
+}

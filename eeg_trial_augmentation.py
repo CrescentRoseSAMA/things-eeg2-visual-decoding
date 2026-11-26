@@ -10,7 +10,7 @@ from eeg_data import CACHE, load_subject
 from eeg_evaluate import ranks_and_accuracy
 from eeg_gemini_iterations import (BASE, BATCH, COURSE, EPOCHS, PILOT, contrast, design_for,
                                    freeze, pairs_as_lists, read_development, result_row)
-from eeg_model import (COSINE_REGRESSION_WEIGHT, ELECTRODE_ATTENTION_CONFIG, PAIR_TEMPERATURE,
+from eeg_model import (COSINE_REGRESSION_WEIGHT, EEGPROJECT_CONFIG, EEGPROJECT_DROPOUT, ELECTRODE_ATTENTION_CONFIG, PAIR_TEMPERATURE,
                        SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT)
 from eeg_pooling_dev import evaluate_checkpoint
 from eeg_pooling_formal import checked_metrics
@@ -22,7 +22,15 @@ from eeg_train import DEVICE, LR, OUT, load_json, reload_and_score, run_dir, sav
 OUTPUT = BASE / "round-06"
 CANDIDATE_ARM = f"{CANDIDATE}_trialaug"
 SOFT_CLIP_ARM = f"{CANDIDATE_ARM}_softclip"
-ATTENTION_ARM = f"{ELECTRODE_ATTENTION_CONFIG}_trialaug"
+ARCHITECTURE_PILOTS = {
+    ELECTRODE_ATTENTION_CONFIG: ("round-10", dict(
+        attention="pre-normalized self-attention over 17 electrodes, before temporal convolution",
+        heads=4, token_features=80, residual_scale_initial=0.0, parameters=915434)),
+    EEGPROJECT_CONFIG: ("round-12", dict(
+        architecture="Flatten 17x80, Linear(1360,768), residual GELU-Linear-Dropout, LayerNorm, L2 normalize",
+        dropout=EEGPROJECT_DROPOUT, parameters=1637376,
+        fusion_diagnostic="50:50 round 06 and EEGProject CSLS scores on the pilot only")),
+}
 
 
 def gains(rows, metric):
@@ -75,11 +83,12 @@ def protocol_for(pairs):
 def checkpoint_stats(candidate, reference, subject, seed, *, soft_clip=False, model_config=CANDIDATE):
     new = training_stats(candidate, model_config, subject, seed)
     old = training_stats(reference, CANDIDATE, subject, seed)
-    if model_config == ELECTRODE_ATTENTION_CONFIG:
+    if model_config in ARCHITECTURE_PILOTS:
+        _, architecture = ARCHITECTURE_PILOTS[model_config]
         if (new.get("training_eeg") != TRIAL_SAMPLING or old.get("training_eeg") != TRIAL_SAMPLING
-                or new["parameters"] != 915434 or old["parameters"] != 889353):
-            raise ValueError("Expected the round 06 settings plus the residual electrode attention layer")
-        return {ATTENTION_ARM: new, CANDIDATE_ARM: old}
+                or new["parameters"] != architecture["parameters"] or old["parameters"] != 889353):
+            raise ValueError("Expected matching round 06 training settings and the locked encoder sizes")
+        return {f"{model_config}_trialaug": new, CANDIDATE_ARM: old}
     if new["parameters"] != old["parameters"] or new.get("training_eeg") != TRIAL_SAMPLING:
         raise ValueError("Expected matching parameter counts and candidate trial augmentation")
     if soft_clip:
@@ -106,8 +115,8 @@ def stored_csls(path, labels):
 
 
 def run_development(name, pairs, split_seed, *, soft_clip=False, model_config=CANDIDATE):
-    attention = model_config == ELECTRODE_ATTENTION_CONFIG
-    directory = (BASE / "round-10" if attention else BASE / "round-07" if soft_clip else OUTPUT) / name
+    architecture_pilot = ARCHITECTURE_PILOTS.get(model_config)
+    directory = (BASE / architecture_pilot[0] if architecture_pilot else BASE / "round-07" if soft_clip else OUTPUT) / name
     stage = directory.relative_to(OUT).as_posix()
     reference_dir = BASE / "round-05" if name == "pilot" else DIRECTORY
     candidate_arm, control_arm = CANDIDATE_ARM, ADJUSTED
@@ -123,13 +132,12 @@ def run_development(name, pairs, split_seed, *, soft_clip=False, model_config=CA
                         soft_clip_weight=SOFT_CLIP_WEIGHT, soft_clip_temperature=SOFT_CLIP_TEMPERATURE,
                         eeg_to_image_targets="0.70 I + 0.30 softmax(normalized CLIP cosine / 0.10) by row",
                         image_to_eeg_targets="hard paired labels", optimizer="Adam", parameters=889353)
-    elif attention:
+    elif architecture_pilot:
         reference_dir = OUTPUT / name
-        candidate_arm, control_arm = ATTENTION_ARM, CANDIDATE_ARM
+        candidate_arm, control_arm = f"{model_config}_trialaug", CANDIDATE_ARM
         protocol.update(candidate=candidate_arm, model=model_config, reference=control_arm,
                         reference_stage=reference_dir.relative_to(OUT).as_posix(), optimizer="Adam",
-                        attention="pre-normalized self-attention over 17 electrodes, before temporal convolution",
-                        heads=4, token_features=80, residual_scale_initial=0.0, parameters=915434)
+                        **architecture_pilot[1])
     reference_stage = reference_dir.relative_to(OUT).as_posix()
     freeze(directory / "protocol.json", dict(protocol, split_seed=split_seed, gate=decision,
            query="standard four-repeat average, fixed 200 templates and 1000 queries"))
@@ -162,19 +170,36 @@ def run_development(name, pairs, split_seed, *, soft_clip=False, model_config=CA
         with np.load(candidate_val) as saved:
             scores = scoring_arms(candidate, saved["scores"], labels, templates, train_eeg, model_config=model_config)
         np.testing.assert_array_equal(raw_ranks, scores[model_config])
-        if name == "pilot" and not (soft_clip or attention):
+        if name == "pilot" and not (soft_clip or architecture_pilot):
             with np.load(reference_val) as saved:
                 old = scoring_arms(reference, saved["scores"], labels, templates, train_eeg,
                                    destination=candidate / "reference_csls.npz")[ADJUSTED]
         else:
             old = stored_csls(reference / "csls.npz", labels)
         row = result_row(subject, seed, candidate_arm, control_arm, scores[ADJUSTED], old, stats)
-        if attention:
+        if model_config == ELECTRODE_ATTENTION_CONFIG:
             weights = torch.load(candidate / "checkpoint.pt", map_location="cpu")["model"]
             row["attention_alpha"] = float(weights["electrode_attention.alpha"])
+        if model_config == EEGPROJECT_CONFIG:
+            with np.load(candidate / "csls.npz") as project, np.load(reference / "csls.npz") as cnn:
+                fused = (project["csls_scores"] + cnn["csls_scores"]) / 2
+            fused_ranks = ranks_and_accuracy(fused, labels)[0]
+            row.update(fusion_top1_hits=int((fused_ranks <= 1).sum()), fusion_top5_hits=int((fused_ranks <= 5).sum()),
+                       project_only_top5_hits=int(((scores[ADJUSTED] <= 5) & (old > 5)).sum()),
+                       cnn_only_top5_hits=int(((old <= 5) & (scores[ADJUSTED] > 5)).sum()))
         rows.append(row)
     passed = gate(name, rows, soft_clip=soft_clip)
-    summarize(directory, rows, gate_pass=passed, official_test_used=False)
+    status = dict(gate_pass=passed, official_test_used=False)
+    if model_config == EEGPROJECT_CONFIG:
+        total = sum(row["queries"] for row in rows)
+        status["fusion_diagnostic"] = dict(
+            top_pct=[100 * sum(row[f"fusion_top{k}_hits"] for row in rows) / total for k in (1, 5)],
+            delta_vs_round06_pp=[100 * sum(row[f"fusion_top{k}_hits"] - row[f"control_top{k}_hits"] for row in rows)
+                                 / total for k in (1, 5)],
+            top5_subject_wins=sum(row["fusion_top5_hits"] > row["control_top5_hits"] for row in rows),
+            project_only_top5_hits=sum(row["project_only_top5_hits"] for row in rows),
+            cnn_only_top5_hits=sum(row["cnn_only_top5_hits"] for row in rows))
+    summarize(directory, rows, **status)
     return passed
 
 
@@ -232,16 +257,19 @@ if __name__ == "__main__":
     parser.add_argument("stage", choices=("pilot", "replication", "formal"))
     variant = parser.add_mutually_exclusive_group()
     variant.add_argument("--soft-clip", action="store_true", help="run the round-07 pilot")
-    variant.add_argument("--electrode-attention", action="store_true", help="run the round-10 pilot")
+    variant.add_argument("--electrode-attention", dest="model_config", action="store_const",
+                         const=ELECTRODE_ATTENTION_CONFIG, help="run the round-10 pilot")
+    variant.add_argument("--eegproject", dest="model_config", action="store_const", const=EEGPROJECT_CONFIG,
+                         help="run the round-12 pilot")
+    parser.set_defaults(model_config=CANDIDATE)
     args = parser.parse_args()
     stage = args.stage
-    if (args.soft_clip or args.electrode_attention) and stage != "pilot":
-        parser.error("--soft-clip and --electrode-attention are available only for the pilot")
+    if (args.soft_clip or args.model_config != CANDIDATE) and stage != "pilot":
+        parser.error("Model variants are available only for the pilot")
     if DEVICE.type != "cuda":
         raise RuntimeError("CUDA device unavailable")
     if stage == "pilot":
-        model_config = ELECTRODE_ATTENTION_CONFIG if args.electrode_attention else CANDIDATE
-        run_development("pilot", PILOT, 2026, soft_clip=args.soft_clip, model_config=model_config)
+        run_development("pilot", PILOT, 2026, soft_clip=args.soft_clip, model_config=args.model_config)
     elif stage == "replication":
         if not load_json(OUTPUT / "pilot" / "summary.json")["gate_pass"]:
             raise RuntimeError("The pilot gate did not pass")

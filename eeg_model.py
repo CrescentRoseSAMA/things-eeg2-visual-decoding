@@ -13,7 +13,10 @@ LEARNABLE_TEMPERATURE_CONFIG = "ab_pool4_resproj_learn_temp"
 COSINE_REGRESSION_CONFIG = "ab_pool4_resproj_cosine"
 TRANSFER_CONFIG = "ab_pool4_resproj_cosine_transfer"
 ELECTRODE_ATTENTION_CONFIG = "ab_pool4_resproj_cosine_electrode_attention"
-COSINE_REGRESSION_CONFIGS = (COSINE_REGRESSION_CONFIG, TRANSFER_CONFIG, ELECTRODE_ATTENTION_CONFIG)
+EEGPROJECT_CONFIG = "eegproject_cosine"
+CNN_COSINE_CONFIGS = (COSINE_REGRESSION_CONFIG, TRANSFER_CONFIG, ELECTRODE_ATTENTION_CONFIG)
+COSINE_REGRESSION_CONFIGS = (*CNN_COSINE_CONFIGS, EEGPROJECT_CONFIG)
+EEGPROJECT_DROPOUT = 0.3
 COSINE_REGRESSION_WEIGHT = 0.25
 SOFT_CLIP_WEIGHT = 0.30
 SOFT_CLIP_TEMPERATURE = 0.10
@@ -58,6 +61,21 @@ class ResidualElectrodeAttention(nn.Module):
         return eeg + self.alpha * mixed
 
 
+class EEGProjectEncoder(nn.Module):
+    """Project the flattened electrode-by-time grid with a residual MLP."""
+
+    def __init__(self):
+        super().__init__()
+        self.projection = nn.Linear(17 * 80, 768)
+        self.residual = nn.Sequential(nn.GELU(), nn.Linear(768, 768), nn.Dropout(EEGPROJECT_DROPOUT))
+        self.norm = nn.LayerNorm(768)
+        self.logit_scale = None
+
+    def forward(self, eeg):
+        projected = self.projection(eeg.flatten(1))
+        return F.normalize(self.norm(projected + self.residual(projected)), dim=1)
+
+
 class EEGEncoder(nn.Module):
     """Encode a batch of standardized 17-electrode, 80-sample epochs."""
 
@@ -69,7 +87,7 @@ class EEGEncoder(nn.Module):
         learn_temperature = config == LEARNABLE_TEMPERATURE_CONFIG
         transfer = config == TRANSFER_CONFIG
         attention = config == ELECTRODE_ATTENTION_CONFIG
-        residual_projection = config == "ab_pool4_resproj" or config in COSINE_REGRESSION_CONFIGS or learn_temperature
+        residual_projection = config == "ab_pool4_resproj" or config in CNN_COSINE_CONFIGS or learn_temperature
         finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise or residual_projection
         if config == "b_pool4":
             config = "b"

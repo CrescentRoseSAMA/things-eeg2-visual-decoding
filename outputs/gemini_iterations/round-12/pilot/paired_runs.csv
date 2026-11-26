@@ -1,0 +1,5 @@
+subject,seed,candidate,control,queries,top1_hits,control_top1_hits,top1_pct,control_top1_pct,top1_delta_pp,top5_hits,control_top5_hits,top5_pct,control_top5_pct,top5_delta_pp,parameters,control_parameters,train_seconds,control_train_seconds,peak_gpu_mib,control_peak_gpu_mib,fusion_top1_hits,fusion_top5_hits,project_only_top5_hits,cnn_only_top5_hits
+1,0,eegproject_cosine_trialaug,ab_pool4_resproj_cosine_trialaug,1000,63,82,6.3,8.2,-1.9,209,261,20.9,26.1,-5.2,1637376,889353,70.25850160000846,135.82731939999485,668.521484375,733.90869140625,83,271,68,120
+2,0,eegproject_cosine_trialaug,ab_pool4_resproj_cosine_trialaug,1000,47,98,4.7,9.8,-5.1,185,262,18.5,26.2,-7.7,1637376,889353,69.79003650000959,131.71878969999761,677.484375,743.12158203125,85,247,59,136
+3,1,eegproject_cosine_trialaug,ab_pool4_resproj_cosine_trialaug,1000,64,82,6.4,8.2,-1.8,195,244,19.5,24.4,-4.9,1637376,889353,69.73347230000218,137.0010048999966,676.9521484375,742.49658203125,88,258,69,118
+4,1,eegproject_cosine_trialaug,ab_pool4_resproj_cosine_trialaug,1000,85,101,8.5,10.1,-1.6,248,305,24.8,30.5,-5.7,1637376,889353,69.60412829995039,135.49363119999725,677.484375,743.12158203125,106,296,66,123

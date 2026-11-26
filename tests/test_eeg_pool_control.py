@@ -2,10 +2,29 @@ import unittest
 
 import torch
 
-from eeg_model import ELECTRODE_ATTENTION_CONFIG, EEGEncoder, contrastive_loss
+from eeg_model import ELECTRODE_ATTENTION_CONFIG, EEGPROJECT_CONFIG, EEGEncoder, contrastive_loss
+from eeg_train import model_for
 
 
 class PoolControlTest(unittest.TestCase):
+    def test_eegproject_projects_the_full_eeg_grid_and_normalizes(self):
+        torch.manual_seed(7)
+        model = model_for(EEGPROJECT_CONFIG).cpu().eval()
+        self.assertIsNone(model.logit_scale)
+        self.assertEqual(sum(parameter.numel() for parameter in model.parameters()), 1637376)
+        self.assertFalse(any(isinstance(layer, torch.nn.BatchNorm1d) or isinstance(layer, torch.nn.BatchNorm2d)
+                             for layer in model.modules()))
+        eeg = torch.randn(4, 17, 80)
+        projected = model.projection(eeg.flatten(1))
+        branch = model.residual[1](torch.nn.functional.gelu(projected))
+        expected = torch.nn.functional.normalize(model.norm(projected + branch), dim=1)
+        output = model(eeg)
+        torch.testing.assert_close(output, expected, atol=0, rtol=0)
+        torch.testing.assert_close(output.norm(dim=1), torch.ones(4))
+        contrastive_loss(output, torch.randn(4, 768), cosine_weight=0.25).backward()
+        self.assertGreater(model.projection.weight.grad.abs().sum().item(), 0)
+        self.assertGreater(model.residual[1].weight.grad.abs().sum().item(), 0)
+
     def test_electrode_attention_preserves_initial_encoder_and_learns(self):
         torch.manual_seed(7)
         control = EEGEncoder("ab_pool4_resproj_cosine").eval()

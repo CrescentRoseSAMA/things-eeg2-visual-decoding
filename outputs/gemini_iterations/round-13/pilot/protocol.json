@@ -1,0 +1,35 @@
+{
+  "model": "ab_pool4_resproj_cosine",
+  "candidate": "round06_qb_norm",
+  "control": "round06_csls",
+  "checkpoint_stage": "gemini_iterations/round-06/pilot",
+  "split_seed": 2026,
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "calibration": "same subject's standard four-repeat dev_train EEG",
+  "gallery": "identical 200 frozen CLIP templates normalized for both methods",
+  "query": "identical 1000 four-repeat development EEG queries",
+  "qb_beta": 20,
+  "qb_k": 1,
+  "csls_k": 10,
+  "query_statistics": "independent rescoring per query",
+  "gate": "Top-5 >= +1pp and Top-1 >= 0pp; at least 3/4 subjects improve Top-5",
+  "new_fits": 0,
+  "official_test_used": false
+}

@@ -13,9 +13,9 @@ import torch
 from torch.optim.swa_utils import AveragedModel
 
 from eeg_data import load_design, load_subject
-from eeg_model import (COSINE_REGRESSION_CONFIGS, COSINE_REGRESSION_WEIGHT,
+from eeg_model import (COSINE_REGRESSION_CONFIGS, COSINE_REGRESSION_WEIGHT, EEGPROJECT_CONFIG,
                        LEARNABLE_TEMPERATURE_CONFIG, MAX_LOGIT_SCALE, PAIR_TEMPERATURE,
-                       SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT, ClassPrototypes, EEGEncoder,
+                       SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT, ClassPrototypes, EEGEncoder, EEGProjectEncoder,
                        contrastive_loss, contrastive_temperature)
 from eeg_repeat_views import (SINGLE_TRIAL_SAMPLING, TRIAL_CHANNEL_DROPOUT, TRIAL_NOISE_STD, TRIAL_SAMPLING,
                               perturb_trial_epoch, sample_epoch, sample_subset_epoch)
@@ -67,7 +67,8 @@ def run_dir(stage, config, subject, seed):
 
 
 def model_for(config):
-    return EEGEncoder(config).to(DEVICE)
+    model = EEGProjectEncoder() if config == EEGPROJECT_CONFIG else EEGEncoder(config)
+    return model.to(DEVICE)
 
 
 @torch.no_grad()

@@ -1,0 +1,34 @@
+{
+  "runs": 4,
+  "candidate_pct": [
+    6.475,
+    20.925
+  ],
+  "control_pct": [
+    9.075,
+    26.8
+  ],
+  "delta_pp": [
+    -2.6,
+    -5.875
+  ],
+  "top1_subject_wins": 0,
+  "positive_top1_seeds": [],
+  "parameters": 1637376,
+  "top5_subject_wins": 0,
+  "gate_pass": false,
+  "official_test_used": false,
+  "fusion_diagnostic": {
+    "top_pct": [
+      9.05,
+      26.8
+    ],
+    "delta_vs_round06_pp": [
+      -0.025,
+      0.0
+    ],
+    "top5_subject_wins": 2,
+    "project_only_top5_hits": 262,
+    "cnn_only_top5_hits": 497
+  }
+}

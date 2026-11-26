@@ -10,6 +10,7 @@ from eeg_train import DEVICE, OUT, load_json, model_for, run_dir, save_json, sco
 
 
 BASE = OUT / "querybank"
+BETA = 20
 GROUPS = {"pilot": ((1, 2), (0,)), "replication": (range(3, 11), (1, 2))}
 PROTOCOL = dict(model=MODEL, checkpoint="development epoch 100", calibration="14540 development training EEGs",
                 measure="Spearman correlation across 200 templates: training top-1 counts vs validation false top-1 counts",
@@ -31,6 +32,11 @@ def control(stage, sub, seed, design):
         return data["scores"]
 
 
+def querybank_statistics(bank):
+    return dict(training_top1=np.bincount(bank.argmax(1), minlength=bank.shape[1]),
+                log_denominator=np.log(np.exp(BETA * bank.astype(np.float64)).sum(0)))
+
+
 @torch.inference_mode()
 def diagnose(stage, sub, seed, design, folder):
     seed_run(seed)
@@ -47,14 +53,14 @@ def diagnose(stage, sub, seed, design, folder):
     raw = control(stage, sub, seed, design)
     np.testing.assert_allclose(scores(design["dev_query"]), raw, rtol=1e-5, atol=2e-6)
     assert bank.shape == (14540, 200) and np.isfinite(bank).all()
-    counts = np.bincount(bank.argmax(1), minlength=200)
+    stats = querybank_statistics(bank)
+    counts = stats["training_top1"]
     predicted = raw.argmax(1)
     false = np.bincount(predicted[predicted != design["dev_labels"]], minlength=200)
     top = np.argsort(-counts, kind="stable")[:20]
     # Compact sufficient statistics for dynamic inverted softmax; labels and validation scores are excluded.
-    log_z = np.log(np.exp(20 * bank.astype(np.float64)).sum(0))
-    np.savez(folder / "template_counts.npz", training_top1=counts, validation_false_top1=false,
-             log_denominator=log_z, template_ids=design["dev_classes"])
+    np.savez(folder / "template_counts.npz", validation_false_top1=false,
+             template_ids=design["dev_classes"], **stats)
     return dict(subject=sub, seed=seed, rho=float(spearmanr(counts, false)[0]),
                 top20_errors=int(false[top].sum()), total_errors=int(false.sum()),
                 top20_error_share=float(false[top].sum()/false.sum()))
@@ -72,7 +78,7 @@ def diagnostic_gate(stage, runs):
 def qb_scores(raw, stats):
     use = stats["training_top1"][raw.argmax(1)] > 0
     adjusted = raw.astype(np.float64)
-    adjusted[use] = 20 * adjusted[use] - stats["log_denominator"]
+    adjusted[use] = BETA * adjusted[use] - stats["log_denominator"]
     return adjusted, use
 
 

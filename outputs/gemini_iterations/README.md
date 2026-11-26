@@ -2,7 +2,7 @@
 
 任务是在 200 个未见类别上用 EEG 检索图像。正式参考 `ab_pool4` 在 10 名被试、5 个种子上取得 Top-1 12.00%、Top-5 35.73%，课程参考线为 15.6% 和 42.8%。
 
-当前最佳正式结果来自第六轮在线试次子集平均、联合损失与 CSLS。50 次正式评测的平均 Top-1 为 16.64%，Top-5 为 40.71%。[正式汇总](round-06/formal/summary.json) · [逐被试逐种子数据](round-06/formal/paired_runs.csv)
+第六轮的在线试次子集平均、联合损失与 CSLS 在 50 组正式评测中得到 16.64% Top-1 和 40.71% Top-5。第十三轮使用同一批权重做全量补充评测，QB-Norm 得到 **17.44% Top-1 和 42.43% Top-5**。[第六轮正式汇总](round-06/formal/summary.json) · [第十三轮全量汇总](round-13/full/summary.json) · [当前模型结构图](figures/current_eeg_model.png)
 
 三轮先导使用开发划分 2026。固定 Sub01、Sub02 的种子 0 和 Sub03、Sub04 的种子 1，每组条件共享查询、模板、训练预算和评分。先导门槛为相对 `ab_pool4` 的平均 Top-1 至少 +0.5 个百分点、至少三名被试的 Top-1 提升、平均 Top-5 持平或提高。
 
@@ -207,4 +207,42 @@ python eeg_trial_augmentation.py pilot --electrode-attention
 
 ```powershell
 python eeg_trial_regularization.py
+```
+
+## 第十二轮 · 展平时空输入的 EEGProject
+
+将 `17×80` EEG 展平，经 `Linear(1360,768)`、由 GELU、线性层和 0.3 Dropout 构成的残差分支、LayerNorm 和 L2 归一化输出。保留第六轮的 Adam、100 轮、在线试次子集平均、联合损失和 CSLS `k=10`。模型有 1,637,376 个参数。
+
+2026 四组先导的平均 Top-1 为 6.475%，Top-5 为 20.925%，相对第六轮变化 −2.600 和 −5.875 个百分点。四名被试的 Top-5 都下降，未达到先导门槛。训练合计 279 秒。
+
+将两份模型的 CSLS 分数按 50:50 平均后，得到 9.050% / 26.800%，相对第六轮变化 −0.025 / 0.000 个百分点。纯 MLP 和 CNN 各有 262 和 497 次只有自己命中的前五查询。该诊断沿用同一开发集，本轮没有训练 CNN＋MLP 双分支。
+
+[模型](../../eeg_model.py) · [复现代码](../../eeg_trial_augmentation.py) · [先导协议](round-12/pilot/protocol.json) · [汇总](round-12/pilot/summary.json) · [配对数据](round-12/pilot/paired_runs.csv)
+
+```powershell
+python eeg_trial_augmentation.py pilot --eegproject
+```
+
+## 第十三轮 · 固定权重的 QB-Norm 与 CSLS 对照
+
+严格重载第六轮的四份先导权重，用每名被试自己的 14,540 条标准四次平均训练 EEG 建校正库。冻结 CLIP 模板、余弦分数、查询和权重在两种评分方式间共享。候选使用动态倒置 softmax（QB-Norm `β=20、k=1`），对照用原版 CSLS `k=10`。本轮没有新增训练。
+
+QB-Norm 的 Top-1 为 9.150%，Top-5 为 27.175%，较第六轮分别提高 0.075 和 0.375 个百分点。四名被试的 Top-5 都提高，合计新增 98 次前五命中、失去 83 次，净增 15 次。平均 Top-5 涨幅低于 1.0 个百分点的门槛。
+
+[复现代码](../../eeg_qb_csls_pilot.py) · [先导协议](round-13/pilot/protocol.json) · [汇总](round-13/pilot/summary.json) · [配对数据](round-13/pilot/paired_runs.csv)
+
+```powershell
+python eeg_qb_csls_pilot.py
+```
+
+### 第十三轮补充 · 50 组正式测试集评分
+
+先导未达到原推进门槛。按后续要求，沿用先导锁定的 `β=20、k=1`，对第六轮已有的 10 名被试 × 5 个种子权重做全量补充评分。每组从该被试的 16,540 条官方训练 EEG 平均样本建立校正库，用 200 条正式测试查询和既有 CLIP 模板评分。两种评分共用同一份权重，新增训练数为 0。
+
+QB-Norm 得到 **17.44% / 42.43%**，同权重 CSLS 为 **16.64% / 40.71%**，提升 **0.80 / 1.72 个百分点**。10 名被试的五种子平均 Top-5 均提高。QB-Norm 的五种子均值之间的标准差为 0.385 / 0.084 个百分点，距课程 Top-5 参考线还差 0.37 个百分点。已独立复算全部 10,000 条查询的分数和排名。
+
+[全量协议](round-13/full/protocol.json) · [全量汇总](round-13/full/summary.json) · [逐被试逐种子数据](round-13/full/paired_runs.csv)
+
+```powershell
+python eeg_qb_csls_pilot.py --full
 ```

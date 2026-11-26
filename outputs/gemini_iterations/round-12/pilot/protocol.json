@@ -1,0 +1,43 @@
+{
+  "candidate": "eegproject_cosine_trialaug",
+  "model": "eegproject_cosine",
+  "reference": "ab_pool4_resproj_cosine_trialaug",
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "epochs": 100,
+  "batch_size": 128,
+  "learning_rate": 0.0002,
+  "temperature": 0.07,
+  "cosine_weight": 0.25,
+  "csls_k": 10,
+  "training_eeg": "uniform k in {2,3,4}; sample trials without replacement",
+  "sampling_rng": "NumPy default_rng([seed, epoch, 604])",
+  "preprocessing": "per-electrode training moments from standard full averages",
+  "calibration": "matched training rows, standard four-repeat average EEG",
+  "official_test_used": false,
+  "reference_stage": "gemini_iterations/round-06/pilot",
+  "optimizer": "Adam",
+  "architecture": "Flatten 17x80, Linear(1360,768), residual GELU-Linear-Dropout, LayerNorm, L2 normalize",
+  "dropout": 0.3,
+  "parameters": 1637376,
+  "fusion_diagnostic": "50:50 round 06 and EEGProject CSLS scores on the pilot only",
+  "split_seed": 2026,
+  "gate": "Top-5 >= +1pp and Top-1 >= 0pp; at least 3/4 subjects improve Top-5",
+  "query": "standard four-repeat average, fixed 200 templates and 1000 queries"
+}
