@@ -1,0 +1,23 @@
+{
+  "runs": 4,
+  "candidate_pct": [
+    9.2,
+    26.15
+  ],
+  "control_pct": [
+    9.075,
+    26.8
+  ],
+  "delta_pp": [
+    0.125,
+    -0.65
+  ],
+  "top1_subject_wins": 2,
+  "positive_top1_seeds": [
+    1
+  ],
+  "parameters": 915434,
+  "top5_subject_wins": 1,
+  "gate_pass": false,
+  "official_test_used": false
+}

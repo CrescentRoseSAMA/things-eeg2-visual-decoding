@@ -1,0 +1,76 @@
+{
+  "candidate": "single_trial_enabled_perturbed_ema",
+  "model": "ab_pool4_resproj_cosine",
+  "reference": "ab_pool4_resproj_cosine_trialaug",
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "epochs": 100,
+  "batch_size": 128,
+  "learning_rate": 0.0002,
+  "temperature": 0.07,
+  "cosine_weight": 0.25,
+  "csls_k": 10,
+  "training_eeg": "uniform k in {1,2,3,4}; sample trials without replacement",
+  "sampling_rng": "NumPy default_rng([seed, epoch, 604])",
+  "preprocessing": "per-electrode training moments from standard full averages",
+  "calibration": "matched training rows, standard four-repeat average EEG",
+  "official_test_used": false,
+  "reference_stage": "gemini_iterations/round-06/pilot",
+  "split_seed": 2026,
+  "comparisons": [
+    [
+      "single_trial_enabled",
+      "ab_pool4_resproj_cosine_trialaug"
+    ],
+    [
+      "single_trial_enabled_perturbed",
+      "ab_pool4_resproj_cosine_trialaug"
+    ],
+    [
+      "single_trial_enabled_ema",
+      "ab_pool4_resproj_cosine_trialaug"
+    ],
+    [
+      "single_trial_enabled_perturbed_ema",
+      "ab_pool4_resproj_cosine_trialaug"
+    ],
+    [
+      "single_trial_enabled_perturbed",
+      "single_trial_enabled"
+    ],
+    [
+      "single_trial_enabled_ema",
+      "single_trial_enabled"
+    ],
+    [
+      "single_trial_enabled_perturbed_ema",
+      "single_trial_enabled_perturbed"
+    ]
+  ],
+  "trial_noise_std": 0.1,
+  "trial_channel_dropout": 0.05,
+  "perturbation": "Gaussian noise in standardized units, then zero entire dropped channels",
+  "perturbation_rng": "independent torch generator seeded by NumPy SeedSequence([seed, epoch, 611])",
+  "ema_decay": 0.9,
+  "ema_first_epoch": 51,
+  "ema": "update once per epoch, initialize at epoch 51, copy current batch-norm buffers",
+  "gate": "full arm vs round 06: Top-5 >= +1pp and Top-1 >= 0pp; at least 3/4 improve Top-5",
+  "query": "standard four-repeat average, fixed 200 templates and 1000 queries",
+  "new_fits": 8
+}

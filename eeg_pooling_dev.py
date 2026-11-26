@@ -8,17 +8,21 @@ from eeg_train import (DEVICE, OUT, model_for, read_log, run_dir, save_json, sco
                        seed_run, tensor, train, write_log)
 
 
-def evaluate_checkpoint(config, subject, seed, design, eeg, centers, destination, stage="dev", *, epochs=100):
+def evaluate_checkpoint(config, subject, seed, design, eeg, centers, destination, stage="dev", *, epochs=100,
+                        checkpoint_name="checkpoint.pt"):
     folder = run_dir(stage, config, subject, seed)
-    ckpt = torch.load(folder / "checkpoint.pt", map_location=DEVICE)
+    ckpt = torch.load(folder / checkpoint_name, map_location=DEVICE)
     assert ckpt["trained_epochs"] == epochs
     model = model_for(config)
     model.load_state_dict(ckpt["model"], strict=True)
     scores = score(model, (eeg - ckpt["mean"]) / ckpt["std"], centers, 128).cpu().numpy()
     ranks, top1, top5 = ranks_and_accuracy(scores, design["dev_labels"])
-    recorded = read_log(folder / "train.csv")[-1]
-    np.testing.assert_allclose((top1, top5), [float(recorded["val_top1"]), float(recorded["val_top5"])],
-                               rtol=0, atol=1e-6)
+    if checkpoint_name == "checkpoint.pt":
+        recorded = read_log(folder / "train.csv")[-1]
+        expected = (float(recorded["val_top1"]), float(recorded["val_top5"]))
+    else:
+        expected = ckpt["validation_accuracy"]
+    np.testing.assert_allclose((top1, top5), expected, rtol=0, atol=1e-6)
     temp = destination.with_suffix(".tmp.npz")
     np.savez(temp, scores=scores, ranks=ranks, labels=design["dev_labels"], query_rows=design["dev_query"])
     temp.replace(destination)

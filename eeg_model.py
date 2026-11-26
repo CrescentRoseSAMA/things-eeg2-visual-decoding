@@ -12,6 +12,8 @@ MAX_LOGIT_SCALE = 100.0
 LEARNABLE_TEMPERATURE_CONFIG = "ab_pool4_resproj_learn_temp"
 COSINE_REGRESSION_CONFIG = "ab_pool4_resproj_cosine"
 TRANSFER_CONFIG = "ab_pool4_resproj_cosine_transfer"
+ELECTRODE_ATTENTION_CONFIG = "ab_pool4_resproj_cosine_electrode_attention"
+COSINE_REGRESSION_CONFIGS = (COSINE_REGRESSION_CONFIG, TRANSFER_CONFIG, ELECTRODE_ATTENTION_CONFIG)
 COSINE_REGRESSION_WEIGHT = 0.25
 SOFT_CLIP_WEIGHT = 0.30
 SOFT_CLIP_TEMPERATURE = 0.10
@@ -41,6 +43,21 @@ class ResidualPointwiseMixing(nn.Module):
         return x + self.alpha * self.branch(x)
 
 
+class ResidualElectrodeAttention(nn.Module):
+    """Mix electrode tokens while retaining each token's full time series."""
+
+    def __init__(self):
+        super().__init__()
+        self.norm = nn.LayerNorm(80)
+        self.attention = nn.MultiheadAttention(80, 4, batch_first=True)
+        self.alpha = nn.Parameter(torch.zeros(()))
+
+    def forward(self, eeg):
+        tokens = self.norm(eeg)
+        mixed, _ = self.attention(tokens, tokens, tokens, need_weights=False)
+        return eeg + self.alpha * mixed
+
+
 class EEGEncoder(nn.Module):
     """Encode a batch of standardized 17-electrode, 80-sample epochs."""
 
@@ -51,7 +68,8 @@ class EEGEncoder(nn.Module):
         pointwise = config == "ab_pool4_pwmix"
         learn_temperature = config == LEARNABLE_TEMPERATURE_CONFIG
         transfer = config == TRANSFER_CONFIG
-        residual_projection = config in {"ab_pool4_resproj", COSINE_REGRESSION_CONFIG} or learn_temperature or transfer
+        attention = config == ELECTRODE_ATTENTION_CONFIG
+        residual_projection = config == "ab_pool4_resproj" or config in COSINE_REGRESSION_CONFIGS or learn_temperature
         finer_time = config in {"b_pool4", "ab_pool4"} or overlap or learned or pointwise or residual_projection
         if config == "b_pool4":
             config = "b"
@@ -118,10 +136,16 @@ class EEGEncoder(nn.Module):
                 self.electrode_adapters = nn.ModuleList(nn.Linear(17, 17, bias=False) for _ in range(adapter_count))
                 for adapter in self.electrode_adapters:
                     adapter.weight.copy_(torch.eye(17))
+        self.electrode_attention = None
+        if attention:
+            with torch.random.fork_rng(devices=[]):
+                self.electrode_attention = ResidualElectrodeAttention()
 
     def forward(self, eeg, adapter_index=0):
         if self.electrode_adapters is not None:
             eeg = self.electrode_adapters[adapter_index](eeg.transpose(1, 2)).transpose(1, 2)
+        if self.electrode_attention is not None:
+            eeg = self.electrode_attention(eeg)
         signal = eeg.unsqueeze(1)
         if len(self.temporal) == 1:
             features = self.temporal[0](signal)

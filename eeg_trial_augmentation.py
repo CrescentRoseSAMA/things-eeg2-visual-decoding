@@ -10,7 +10,8 @@ from eeg_data import CACHE, load_subject
 from eeg_evaluate import ranks_and_accuracy
 from eeg_gemini_iterations import (BASE, BATCH, COURSE, EPOCHS, PILOT, contrast, design_for,
                                    freeze, pairs_as_lists, read_development, result_row)
-from eeg_model import COSINE_REGRESSION_WEIGHT, PAIR_TEMPERATURE, SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT
+from eeg_model import (COSINE_REGRESSION_WEIGHT, ELECTRODE_ATTENTION_CONFIG, PAIR_TEMPERATURE,
+                       SOFT_CLIP_TEMPERATURE, SOFT_CLIP_WEIGHT)
 from eeg_pooling_dev import evaluate_checkpoint
 from eeg_pooling_formal import checked_metrics
 from eeg_repeat_experiment import raw_trials
@@ -21,6 +22,7 @@ from eeg_train import DEVICE, LR, OUT, load_json, reload_and_score, run_dir, sav
 OUTPUT = BASE / "round-06"
 CANDIDATE_ARM = f"{CANDIDATE}_trialaug"
 SOFT_CLIP_ARM = f"{CANDIDATE_ARM}_softclip"
+ATTENTION_ARM = f"{ELECTRODE_ATTENTION_CONFIG}_trialaug"
 
 
 def gains(rows, metric):
@@ -70,9 +72,14 @@ def protocol_for(pairs):
                 official_test_used=False)
 
 
-def checkpoint_stats(candidate, reference, subject, seed, *, soft_clip=False):
-    new = training_stats(candidate, CANDIDATE, subject, seed)
+def checkpoint_stats(candidate, reference, subject, seed, *, soft_clip=False, model_config=CANDIDATE):
+    new = training_stats(candidate, model_config, subject, seed)
     old = training_stats(reference, CANDIDATE, subject, seed)
+    if model_config == ELECTRODE_ATTENTION_CONFIG:
+        if (new.get("training_eeg") != TRIAL_SAMPLING or old.get("training_eeg") != TRIAL_SAMPLING
+                or new["parameters"] != 915434 or old["parameters"] != 889353):
+            raise ValueError("Expected the round 06 settings plus the residual electrode attention layer")
+        return {ATTENTION_ARM: new, CANDIDATE_ARM: old}
     if new["parameters"] != old["parameters"] or new.get("training_eeg") != TRIAL_SAMPLING:
         raise ValueError("Expected matching parameter counts and candidate trial augmentation")
     if soft_clip:
@@ -98,8 +105,9 @@ def stored_csls(path, labels):
         return ranks
 
 
-def run_development(name, pairs, split_seed, *, soft_clip=False):
-    directory = (BASE / "round-07" if soft_clip else OUTPUT) / name
+def run_development(name, pairs, split_seed, *, soft_clip=False, model_config=CANDIDATE):
+    attention = model_config == ELECTRODE_ATTENTION_CONFIG
+    directory = (BASE / "round-10" if attention else BASE / "round-07" if soft_clip else OUTPUT) / name
     stage = directory.relative_to(OUT).as_posix()
     reference_dir = BASE / "round-05" if name == "pilot" else DIRECTORY
     candidate_arm, control_arm = CANDIDATE_ARM, ADJUSTED
@@ -115,6 +123,13 @@ def run_development(name, pairs, split_seed, *, soft_clip=False):
                         soft_clip_weight=SOFT_CLIP_WEIGHT, soft_clip_temperature=SOFT_CLIP_TEMPERATURE,
                         eeg_to_image_targets="0.70 I + 0.30 softmax(normalized CLIP cosine / 0.10) by row",
                         image_to_eeg_targets="hard paired labels", optimizer="Adam", parameters=889353)
+    elif attention:
+        reference_dir = OUTPUT / name
+        candidate_arm, control_arm = ATTENTION_ARM, CANDIDATE_ARM
+        protocol.update(candidate=candidate_arm, model=model_config, reference=control_arm,
+                        reference_stage=reference_dir.relative_to(OUT).as_posix(), optimizer="Adam",
+                        attention="pre-normalized self-attention over 17 electrodes, before temporal convolution",
+                        heads=4, token_features=80, residual_scale_initial=0.0, parameters=915434)
     reference_stage = reference_dir.relative_to(OUT).as_posix()
     freeze(directory / "protocol.json", dict(protocol, split_seed=split_seed, gate=decision,
            query="standard four-repeat average, fixed 200 templates and 1000 queries"))
@@ -130,14 +145,14 @@ def run_development(name, pairs, split_seed, *, soft_clip=False):
             del repeats
             repeats = checked_trials(subject, indices, full)
             last_subject = subject
-        train(CANDIDATE, subject, seed, stage, EPOCHS, BATCH, design, split="dev", trial_repeats=repeats,
+        train(model_config, subject, seed, stage, EPOCHS, BATCH, design, split="dev", trial_repeats=repeats,
               soft_clip=soft_clip)
-        candidate = run_dir(stage, CANDIDATE, subject, seed)
+        candidate = run_dir(stage, model_config, subject, seed)
         reference = run_dir(reference_stage, CANDIDATE, subject, seed)
-        stats = checkpoint_stats(candidate, reference, subject, seed, soft_clip=soft_clip)
+        stats = checkpoint_stats(candidate, reference, subject, seed, soft_clip=soft_clip, model_config=model_config)
         candidate_val, reference_val = candidate / "validation.npz", reference / "validation.npz"
         query = tensor(full[design["dev_query"]])
-        _, mean, std = evaluate_checkpoint(CANDIDATE, subject, seed, design, query, centers, candidate_val, stage)
+        _, mean, std = evaluate_checkpoint(model_config, subject, seed, design, query, centers, candidate_val, stage)
         control = torch.load(reference / "checkpoint.pt", map_location=DEVICE)
         torch.testing.assert_close(mean, control["mean"], rtol=0, atol=0)
         torch.testing.assert_close(std, control["std"], rtol=0, atol=0)
@@ -145,15 +160,19 @@ def run_development(name, pairs, split_seed, *, soft_clip=False):
         read_development(reference_val, design)
         train_eeg = full[indices]
         with np.load(candidate_val) as saved:
-            scores = scoring_arms(candidate, saved["scores"], labels, templates, train_eeg)
-        np.testing.assert_array_equal(raw_ranks, scores[CANDIDATE])
-        if name == "pilot" and not soft_clip:
+            scores = scoring_arms(candidate, saved["scores"], labels, templates, train_eeg, model_config=model_config)
+        np.testing.assert_array_equal(raw_ranks, scores[model_config])
+        if name == "pilot" and not (soft_clip or attention):
             with np.load(reference_val) as saved:
                 old = scoring_arms(reference, saved["scores"], labels, templates, train_eeg,
                                    destination=candidate / "reference_csls.npz")[ADJUSTED]
         else:
             old = stored_csls(reference / "csls.npz", labels)
-        rows.append(result_row(subject, seed, candidate_arm, control_arm, scores[ADJUSTED], old, stats))
+        row = result_row(subject, seed, candidate_arm, control_arm, scores[ADJUSTED], old, stats)
+        if attention:
+            weights = torch.load(candidate / "checkpoint.pt", map_location="cpu")["model"]
+            row["attention_alpha"] = float(weights["electrode_attention.alpha"])
+        rows.append(row)
     passed = gate(name, rows, soft_clip=soft_clip)
     summarize(directory, rows, gate_pass=passed, official_test_used=False)
     return passed
@@ -211,15 +230,18 @@ def run_formal():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("stage", choices=("pilot", "replication", "formal"))
-    parser.add_argument("--soft-clip", action="store_true", help="run the round-07 pilot")
+    variant = parser.add_mutually_exclusive_group()
+    variant.add_argument("--soft-clip", action="store_true", help="run the round-07 pilot")
+    variant.add_argument("--electrode-attention", action="store_true", help="run the round-10 pilot")
     args = parser.parse_args()
     stage = args.stage
-    if args.soft_clip and stage != "pilot":
-        parser.error("--soft-clip is available only for the pilot")
+    if (args.soft_clip or args.electrode_attention) and stage != "pilot":
+        parser.error("--soft-clip and --electrode-attention are available only for the pilot")
     if DEVICE.type != "cuda":
         raise RuntimeError("CUDA device unavailable")
     if stage == "pilot":
-        run_development("pilot", PILOT, 2026, soft_clip=args.soft_clip)
+        model_config = ELECTRODE_ATTENTION_CONFIG if args.electrode_attention else CANDIDATE
+        run_development("pilot", PILOT, 2026, soft_clip=args.soft_clip, model_config=model_config)
     elif stage == "replication":
         if not load_json(OUTPUT / "pilot" / "summary.json")["gate_pass"]:
             raise RuntimeError("The pilot gate did not pass")

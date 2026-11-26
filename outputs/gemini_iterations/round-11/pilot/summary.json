@@ -1,0 +1,152 @@
+{
+  "comparisons": {
+    "single_trial_enabled_vs_ab_pool4_resproj_cosine_trialaug": {
+      "runs": 4,
+      "candidate_pct": [
+        9.375,
+        26.975
+      ],
+      "control_pct": [
+        9.075,
+        26.8
+      ],
+      "delta_pp": [
+        0.3,
+        0.175
+      ],
+      "top1_subject_wins": 2,
+      "positive_top1_seeds": [
+        1
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 1
+    },
+    "single_trial_enabled_perturbed_vs_ab_pool4_resproj_cosine_trialaug": {
+      "runs": 4,
+      "candidate_pct": [
+        9.4,
+        27.35
+      ],
+      "control_pct": [
+        9.075,
+        26.8
+      ],
+      "delta_pp": [
+        0.325,
+        0.55
+      ],
+      "top1_subject_wins": 3,
+      "positive_top1_seeds": [
+        1
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 2
+    },
+    "single_trial_enabled_ema_vs_ab_pool4_resproj_cosine_trialaug": {
+      "runs": 4,
+      "candidate_pct": [
+        9.2,
+        27.45
+      ],
+      "control_pct": [
+        9.075,
+        26.8
+      ],
+      "delta_pp": [
+        0.125,
+        0.65
+      ],
+      "top1_subject_wins": 2,
+      "positive_top1_seeds": [
+        1
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 2
+    },
+    "single_trial_enabled_perturbed_ema_vs_ab_pool4_resproj_cosine_trialaug": {
+      "runs": 4,
+      "candidate_pct": [
+        9.325,
+        27.525
+      ],
+      "control_pct": [
+        9.075,
+        26.8
+      ],
+      "delta_pp": [
+        0.25,
+        0.725
+      ],
+      "top1_subject_wins": 3,
+      "positive_top1_seeds": [
+        1
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 2,
+      "gate_pass": false
+    },
+    "single_trial_enabled_perturbed_vs_single_trial_enabled": {
+      "runs": 4,
+      "candidate_pct": [
+        9.4,
+        27.35
+      ],
+      "control_pct": [
+        9.375,
+        26.975
+      ],
+      "delta_pp": [
+        0.025,
+        0.375
+      ],
+      "top1_subject_wins": 2,
+      "positive_top1_seeds": [
+        0
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 2
+    },
+    "single_trial_enabled_ema_vs_single_trial_enabled": {
+      "runs": 4,
+      "candidate_pct": [
+        9.2,
+        27.45
+      ],
+      "control_pct": [
+        9.375,
+        26.975
+      ],
+      "delta_pp": [
+        -0.175,
+        0.475
+      ],
+      "top1_subject_wins": 1,
+      "positive_top1_seeds": [
+        0
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 3
+    },
+    "single_trial_enabled_perturbed_ema_vs_single_trial_enabled_perturbed": {
+      "runs": 4,
+      "candidate_pct": [
+        9.325,
+        27.525
+      ],
+      "control_pct": [
+        9.4,
+        27.35
+      ],
+      "delta_pp": [
+        -0.075,
+        0.175
+      ],
+      "top1_subject_wins": 1,
+      "positive_top1_seeds": [],
+      "parameters": 889353,
+      "top5_subject_wins": 3
+    }
+  },
+  "new_fits": 8,
+  "official_test_used": false
+}

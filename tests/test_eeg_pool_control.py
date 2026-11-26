@@ -2,10 +2,33 @@ import unittest
 
 import torch
 
-from eeg_model import EEGEncoder, contrastive_loss
+from eeg_model import ELECTRODE_ATTENTION_CONFIG, EEGEncoder, contrastive_loss
 
 
 class PoolControlTest(unittest.TestCase):
+    def test_electrode_attention_preserves_initial_encoder_and_learns(self):
+        torch.manual_seed(7)
+        control = EEGEncoder("ab_pool4_resproj_cosine").eval()
+        control_rng = torch.get_rng_state()
+        torch.manual_seed(7)
+        candidate = EEGEncoder(ELECTRODE_ATTENTION_CONFIG).eval()
+        self.assertTrue(torch.equal(torch.get_rng_state(), control_rng))
+        self.assertEqual(sum(p.numel() for p in candidate.parameters()), 915434)
+        for name, value in control.state_dict().items():
+            torch.testing.assert_close(candidate.state_dict()[name], value, rtol=0, atol=0)
+        eeg = torch.randn(4, 17, 80)
+        output = candidate(eeg)
+        torch.testing.assert_close(output, control(eeg), rtol=0, atol=0)
+        output[:, 0].sum().backward()
+        layer = candidate.electrode_attention
+        self.assertGreater(layer.alpha.grad.abs().item(), 0)
+        with torch.no_grad():
+            layer.alpha.fill_(0.1)
+            changed = eeg.clone()
+            changed[:, -1, :10] += 3
+            self.assertEqual(layer(eeg).shape, eeg.shape)
+            self.assertGreater((layer(changed)[:, :-1] - layer(eeg)[:, :-1]).abs().sum().item(), 0)
+
     def test_cosine_regression_uses_the_same_encoder_and_matched_pairs(self):
         torch.manual_seed(7)
         control = EEGEncoder("ab_pool4_resproj").eval()

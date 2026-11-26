@@ -176,3 +176,35 @@ python eeg_transfer_pilot.py --replication
 ```powershell
 python eeg_score_fusion.py
 ```
+
+## 第十轮 · 电极残差自注意力
+
+在第六轮模型的多尺度时间卷积前加入一层四头自注意力，以 17 个电极为 token，每个 token 保留 80 个时间点。残差系数从零开始，初始输出与第六轮一致。沿用电极门控、联合损失、在线试次子集平均、冻结 CLIP 和 CSLS `k=10`。参数量从 889,353 增至 915,434。
+
+2026 划分四组先导的平均 Top-1 为 9.200%，Top-5 为 26.150%，较第六轮分别变化 +0.125 和 −0.650 个百分点。只有 Sub03 的 Top-5 提升（+1.4 个百分点），未达到先导门槛。四组学到的残差系数绝对值为 0.338–0.385，候选训练合计 753 秒。本轮止于开发集先导。
+
+[模型](../../eeg_model.py) · [复现代码](../../eeg_trial_augmentation.py) · [先导协议](round-10/pilot/protocol.json) · [汇总](round-10/pilot/summary.json) · [配对数据](round-10/pilot/paired_runs.csv)
+
+```powershell
+python eeg_trial_augmentation.py pilot --electrode-attention
+```
+
+## 第十一轮 · 单试次、输入扰动与权重 EMA
+
+四组配对先导各训练两次。两条训练轨迹都把在线平均的试次数扩为等概率 1、2、3、4，一条额外加入标准化单位下的高斯噪声（标准差 0.10）和整通道遮蔽（概率 0.05）。从第 51 轮起每轮更新一次参数 EMA（衰减 0.90），沿用该轮的 BatchNorm 缓冲区。每条轨迹都评估普通与 EMA 权重，使用标准平均 EEG、冻结 CLIP 和 CSLS `k=10`。
+
+| 方案 | Top-1 | Top-5 | 相对第六轮（百分点） | Top-5 提升被试 |
+|---|---:|---:|---:|---:|
+| 第六轮对照 | 9.075% | 26.800% | — | — |
+| 纳入单试次 | 9.375% | 26.975% | +0.300 / +0.175 | 1/4 |
+| 纳入单试次、加输入扰动 | 9.400% | 27.350% | +0.325 / +0.550 | 2/4 |
+| 纳入单试次、用 EMA | 9.200% | 27.450% | +0.125 / +0.650 | 2/4 |
+| 纳入单试次、加输入扰动、用 EMA | 9.325% | 27.525% | +0.250 / +0.725 | 2/4 |
+
+完整方案低于 Top-5 至少增加 1.0 个百分点且至少 3/4 名被试提升的门槛。相对各自的普通权重，EMA 在两条轨迹上分别提高 Top-5 0.475 和 0.175 个百分点，同时降低 Top-1 0.175 和 0.075 个百分点。八次训练合计 1,104 秒，实验止于开发集先导。
+
+[复现代码](../../eeg_trial_regularization.py) · [先导协议](round-11/pilot/protocol.json) · [汇总](round-11/pilot/summary.json) · [配对数据](round-11/pilot/paired_runs.csv)
+
+```powershell
+python eeg_trial_regularization.py
+```

@@ -1,0 +1,44 @@
+{
+  "candidate": "ab_pool4_resproj_cosine_electrode_attention_trialaug",
+  "model": "ab_pool4_resproj_cosine_electrode_attention",
+  "reference": "ab_pool4_resproj_cosine_trialaug",
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "epochs": 100,
+  "batch_size": 128,
+  "learning_rate": 0.0002,
+  "temperature": 0.07,
+  "cosine_weight": 0.25,
+  "csls_k": 10,
+  "training_eeg": "uniform k in {2,3,4}; sample trials without replacement",
+  "sampling_rng": "NumPy default_rng([seed, epoch, 604])",
+  "preprocessing": "per-electrode training moments from standard full averages",
+  "calibration": "matched training rows, standard four-repeat average EEG",
+  "official_test_used": false,
+  "reference_stage": "gemini_iterations/round-06/pilot",
+  "optimizer": "Adam",
+  "attention": "pre-normalized self-attention over 17 electrodes, before temporal convolution",
+  "heads": 4,
+  "token_features": 80,
+  "residual_scale_initial": 0.0,
+  "parameters": 915434,
+  "split_seed": 2026,
+  "gate": "Top-5 >= +1pp and Top-1 >= 0pp; at least 3/4 subjects improve Top-5",
+  "query": "standard four-repeat average, fixed 200 templates and 1000 queries"
+}

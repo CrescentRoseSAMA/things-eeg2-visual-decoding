@@ -8,7 +8,7 @@ from eeg_data import CACHE, load_subject
 from eeg_evaluate import ranks_and_accuracy
 from eeg_gemini_iterations import (BASE, BATCH, COURSE, EPOCHS, REFERENCE, contrast,
                                    design_for, freeze, pairs_as_lists, read_development, result_row)
-from eeg_model import COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_WEIGHT, PAIR_TEMPERATURE, TRANSFER_CONFIG
+from eeg_model import COSINE_REGRESSION_CONFIG, COSINE_REGRESSION_CONFIGS, COSINE_REGRESSION_WEIGHT, PAIR_TEMPERATURE
 from eeg_pooling_dev import evaluate_checkpoint
 from eeg_pooling_formal import checked_metrics
 from eeg_train import (DEVICE, LR, OUT, load_json, model_for, read_log, reload_and_score,
@@ -51,14 +51,15 @@ def training_stats(folder, config, subject, seed, *, epochs=EPOCHS, lr=LR):
     if actual != expected or [int(row["epoch"]) for row in read_log(folder / "train.csv")] != list(
             range(1, epochs + 1)):
         raise ValueError(f"Unexpected checkpoint training settings: {folder}")
-    if config in (CANDIDATE, TRANSFER_CONFIG) and stats.get("cosine_regression_weight") != COSINE_REGRESSION_WEIGHT:
+    if config in COSINE_REGRESSION_CONFIGS and stats.get("cosine_regression_weight") != COSINE_REGRESSION_WEIGHT:
         raise ValueError(f"Unexpected cosine regression weight: {folder}")
     return stats
 
 
-def scoring_arms(folder, raw, labels, templates, training_eeg, *, destination=None, model_config=CANDIDATE):
+def scoring_arms(folder, raw, labels, templates, training_eeg, *, destination=None, model_config=CANDIDATE,
+                 checkpoint_name="checkpoint.pt"):
     """Compare three scores for one fixed checkpoint and persist sample-level evidence."""
-    ckpt = torch.load(folder / "checkpoint.pt", map_location=DEVICE)
+    ckpt = torch.load(folder / checkpoint_name, map_location=DEVICE)
     model = model_for(model_config)
     model.load_state_dict(ckpt["model"], strict=True)
     inputs = (tensor(training_eeg) - ckpt["mean"]) / ckpt["std"]
@@ -69,7 +70,7 @@ def scoring_arms(folder, raw, labels, templates, training_eeg, *, destination=No
         raise ValueError("Invalid fixed-gallery scores or training bank")
     cosine = raw / norms
     adjusted = csls_scores(cosine, bank / norms)
-    scores = {CANDIDATE: raw, NORMALIZED: cosine, ADJUSTED: adjusted}
+    scores = {model_config: raw, NORMALIZED: cosine, ADJUSTED: adjusted}
     ranks = {name: ranks_and_accuracy(values, labels)[0] for name, values in scores.items()}
     destination = folder / "csls.npz" if destination is None else destination
     temporary = destination.with_suffix(".tmp.npz")
