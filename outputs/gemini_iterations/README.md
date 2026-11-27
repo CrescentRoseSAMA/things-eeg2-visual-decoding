@@ -2,7 +2,7 @@
 
 任务是在 200 个未见类别上用 EEG 检索图像。正式参考 `ab_pool4` 在 10 名被试、5 个种子上取得 Top-1 12.00%、Top-5 35.73%，课程参考线为 15.6% 和 42.8%。
 
-第六轮的在线试次子集平均、联合损失与 CSLS 在 50 组正式评测中得到 16.64% Top-1 和 40.71% Top-5。第十三轮使用同一批权重做全量补充评测，QB-Norm 得到 **17.44% Top-1 和 42.43% Top-5**。[第六轮正式汇总](round-06/formal/summary.json) · [第十三轮全量汇总](round-13/full/summary.json) · [当前模型结构图](figures/current_eeg_model.png)
+第十五轮的 Top-5 排序辅助损失与 QB-Norm 在 50 组正式评测中得到 **17.86% Top-1 和 43.66% Top-5**，分别高出课程参考线 2.26 和 0.86 个百分点。[项目总览与交付状态](PROJECT_SUMMARY.md) · [第十五轮正式汇总](round-15/full/summary.json) · [编码器结构图](figures/current_eeg_model.png)
 
 三轮先导使用开发划分 2026。固定 Sub01、Sub02 的种子 0 和 Sub03、Sub04 的种子 1，每组条件共享查询、模板、训练预算和评分。先导门槛为相对 `ab_pool4` 的平均 Top-1 至少 +0.5 个百分点、至少三名被试的 Top-1 提升、平均 Top-5 持平或提高。
 
