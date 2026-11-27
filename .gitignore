@@ -10,6 +10,8 @@
 !/outputs/
 !/_work/
 !/analysis/
+!/Report/
+!/Report/**
 !/2026数据挖掘技术期末专题大作业/
 /_work/*
 !/_work/download_things_eeg2.py
