@@ -28,6 +28,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LR = 0.0002
 EMA_DECAY = 0.90
 EMA_FIRST_EPOCH = 51
+TOP5_RANK_WEIGHT = 0.10
+TOP5_GALLERY_SIZE = 200
 
 
 def save_json(path, obj):
@@ -147,13 +149,16 @@ def make_weight_ema(model):
 
 def train(config, subject, seed, stage, epochs, batch, design, *, split=None, class_labels=None,
           repeat_views=None, trial_repeats=None, sources=None, initial_checkpoint=None, snapshot_epochs=(),
-          negatives=None, soft_clip=False, lr=LR, single_trials=False, perturb_trials=False, weight_ema=False):
+          negatives=None, soft_clip=False, lr=LR, single_trials=False, perturb_trials=False, weight_ema=False,
+          trial_noise_std=TRIAL_NOISE_STD, top5_ranking=False):
     if trial_repeats is not None and (repeat_views is not None or sources is not None):
         raise ValueError("Trial subset augmentation requires within-subject raw trials only")
     if (single_trials or perturb_trials) and trial_repeats is None:
         raise ValueError("Trial regularization requires raw trials")
     if weight_ema and epochs < EMA_FIRST_EPOCH:
         raise ValueError("The training budget ends before weight averaging starts")
+    if top5_ranking and class_labels is None:
+        raise ValueError("Top-5 ranking requires training class labels")
     folder = run_dir(stage, config, subject, seed)
     folder.mkdir(parents=True, exist_ok=True)
     settings = dict(config=config, subject=subject, seed=seed, stage=stage,
@@ -180,10 +185,12 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
     if trial_repeats is not None:
         settings["training_eeg"] = SINGLE_TRIAL_SAMPLING if single_trials else TRIAL_SAMPLING
     if perturb_trials:
-        settings.update(trial_noise_std=TRIAL_NOISE_STD, trial_channel_dropout=TRIAL_CHANNEL_DROPOUT)
+        settings.update(trial_noise_std=trial_noise_std, trial_channel_dropout=TRIAL_CHANNEL_DROPOUT)
     if weight_ema:
         settings.update(ema_decay=EMA_DECAY, ema_first_epoch=EMA_FIRST_EPOCH)
-    if class_labels is not None:
+    if top5_ranking:
+        settings.update(top5_rank_weight=TOP5_RANK_WEIGHT, top5_gallery_size=TOP5_GALLERY_SIZE)
+    elif class_labels is not None:
         settings.update(image_loss_weight=0.75, leave_one_out_class_loss_weight=0.25)
     if (folder / "settings.json").exists() and load_json(folder / "settings.json") != settings:
         raise ValueError(f"Existing run has different settings: {folder}")
@@ -205,6 +212,8 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
     elif repeat_views is not None:
         repeat_views = torch.as_tensor(repeat_views, device=DEVICE).sub(mean).div_(std)
     bank = ClassPrototypes(images, class_labels) if class_labels is not None else None
+    if top5_ranking and len(bank.centers) < TOP5_GALLERY_SIZE:
+        raise ValueError("Not enough training classes for the Top-5 gallery")
     if negatives is not None:
         negative_images = torch.nn.functional.normalize(images, dim=1)
     model = model_for(config)
@@ -213,6 +222,8 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
     ema = make_weight_ema(model) if weight_ema else None
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     generator = torch.Generator(device=DEVICE).manual_seed(seed)
+    if top5_ranking:
+        ranking_generator = torch.Generator(device=DEVICE)
     resume = folder / "resume.pt"
     log_path = folder / "train.csv"
     rows = []
@@ -241,13 +252,15 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
         if trial_repeats is not None:
             epoch_x = sample_subset_epoch(x, repeat_views, seed, epoch, min_trials=1 if single_trials else 2)
             if perturb_trials:
-                epoch_x = perturb_trial_epoch(epoch_x, seed, epoch)
+                epoch_x = perturb_trial_epoch(epoch_x, seed, epoch, noise_std=trial_noise_std)
         elif repeat_views is not None:
             epoch_x = sample_epoch(x, repeat_views, seed, epoch)
         if sources is not None and len(sources) > 1:
             selected = torch.as_tensor(source_indices(len(x), len(sources), seed, epoch), device=DEVICE)
             epoch_x = source_x[selected, image_rows]
         order = torch.randperm(len(x), generator=generator, device=DEVICE)
+        if top5_ranking:
+            ranking_generator.manual_seed(seed * (2 ** 32) + epoch)
         if negatives is not None:
             extra_rows = negatives.sample(order.cpu().numpy(), batch, seed, epoch)
             extra_rows = torch.as_tensor(extra_rows, device=DEVICE)
@@ -258,7 +271,11 @@ def train(config, subject, seed, stage, epochs, batch, design, *, split=None, cl
             extra = None if negatives is None else negative_images[extra_rows[ids]]
             loss = contrastive_loss(emb, paired, extra, logit_scale=model.logit_scale,
                                     cosine_weight=cosine_weight, soft_clip=soft_clip)
-            if bank is not None:
+            if top5_ranking:
+                gallery = torch.randperm(len(bank.centers), generator=ranking_generator,
+                                        device=DEVICE)[:TOP5_GALLERY_SIZE]
+                loss = loss + TOP5_RANK_WEIGHT * bank.top5_loss(emb, paired, ids, gallery)
+            elif bank is not None:
                 loss = 0.75 * loss + 0.25 * bank.loss(emb, paired, ids)
             loss.backward()
             opt.step()

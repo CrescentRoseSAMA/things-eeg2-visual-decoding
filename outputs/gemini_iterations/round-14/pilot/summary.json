@@ -1,0 +1,49 @@
+{
+  "comparisons": {
+    "round06_qb_norm": {
+      "runs": 4,
+      "candidate_pct": [
+        9.75,
+        27.875
+      ],
+      "control_pct": [
+        9.15,
+        27.175
+      ],
+      "delta_pp": [
+        0.6,
+        0.7
+      ],
+      "top1_subject_wins": 3,
+      "positive_top1_seeds": [
+        1
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 2
+    },
+    "noise010_ema_qb": {
+      "runs": 4,
+      "candidate_pct": [
+        9.75,
+        27.875
+      ],
+      "control_pct": [
+        9.75,
+        27.85
+      ],
+      "delta_pp": [
+        0.0,
+        0.025
+      ],
+      "top1_subject_wins": 3,
+      "positive_top1_seeds": [
+        1
+      ],
+      "parameters": 889353,
+      "top5_subject_wins": 2
+    }
+  },
+  "gate_pass": false,
+  "new_fits": 4,
+  "official_test_used": false
+}

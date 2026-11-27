@@ -1,0 +1,42 @@
+{
+  "candidate": "noise005_ema_qb",
+  "parent": "noise010_ema_qb",
+  "baseline": "round06_qb_norm",
+  "split_seed": 2026,
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "model": "ab_pool4_resproj_cosine",
+  "epochs": 100,
+  "batch_size": 128,
+  "lr": 0.0002,
+  "training_eeg": "uniform k in {1,2,3,4}; sample trials without replacement",
+  "parent_checkpoint_stage": "gemini_iterations/round-11/pilot/single_trial_enabled_perturbed",
+  "noise_std": 0.05,
+  "parent_noise_std": 0.1,
+  "channel_dropout": 0.05,
+  "ema_decay": 0.9,
+  "ema_first_epoch": 51,
+  "ema_bn": "last epoch buffers",
+  "qb_beta": 20,
+  "qb_k": 1,
+  "calibration": "standard four-repeat dev_train EEG, within subject",
+  "gate": "vs round 06 QB-Norm: Top-5 >= +1pp, Top-1 >= 0pp, at least 3/4 improve Top-5",
+  "new_fits": 4,
+  "official_test_used": false
+}

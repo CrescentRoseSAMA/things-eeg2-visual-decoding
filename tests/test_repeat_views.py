@@ -20,6 +20,10 @@ class RepeatViewTest(unittest.TestCase):
         removed = (perturbed == 0).all(2)
         self.assertAlmostEqual(float(removed.float().mean()), .05, delta=.01)
         self.assertAlmostEqual(float((perturbed - single_enabled)[~removed].std()), .10, delta=.005)
+        milder = perturb_trial_epoch(single_enabled, 3, 8, noise_std=.05)
+        torch.testing.assert_close((milder == 0).all(2), removed, atol=0, rtol=0)
+        torch.testing.assert_close((milder - single_enabled)[~removed],
+                                   (perturbed - single_enabled)[~removed] / 2, atol=1e-6, rtol=0)
         self.assertTrue(torch.equal(state, torch.get_rng_state()))
 
     def test_ema_averages_weights_keeps_latest_buffers_and_resumes(self):

@@ -32,9 +32,9 @@ def sample_subset_epoch(full, repeats, seed, epoch, *, min_trials=2):
     return torch.where(use_full[:, None, None], full, averaged)
 
 
-def perturb_trial_epoch(eeg, seed, epoch):
+def perturb_trial_epoch(eeg, seed, epoch, *, noise_std=TRIAL_NOISE_STD):
     noise_seed = int(np.random.SeedSequence([seed, epoch, 611]).generate_state(1, dtype=np.uint64)[0])
     generator = torch.Generator(device=eeg.device).manual_seed(noise_seed)
     noise = torch.randn(eeg.shape, dtype=eeg.dtype, device=eeg.device, generator=generator)
     drop = torch.rand(eeg.shape[:2], device=eeg.device, generator=generator) < TRIAL_CHANNEL_DROPOUT
-    return noise.mul_(TRIAL_NOISE_STD).add_(eeg).masked_fill_(drop.unsqueeze(2), 0)
+    return noise.mul_(noise_std).add_(eeg).masked_fill_(drop.unsqueeze(2), 0)

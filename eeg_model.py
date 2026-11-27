@@ -230,3 +230,13 @@ class ClassPrototypes:
         own = ((self.sums[targets] - paired) * eeg).sum(1, keepdim=True) / 9
         logits = (eeg @ self.centers.T).scatter(1, targets[:, None], own)
         return F.cross_entropy(logits / 0.07, targets)
+
+    def top5_loss(self, eeg, paired, ids, gallery):
+        targets = self.targets[ids]
+        positive = (eeg * F.normalize(self.sums[targets] - paired, dim=1)).sum(1)
+        eligible = targets[:, None] != gallery
+        # Use the last draw only when it needs to replace the masked target.
+        eligible[:, -1] &= (~eligible[:, :-1]).any(1)
+        candidates = eeg @ F.normalize(self.centers[gallery], dim=1).T
+        fifth = candidates.masked_fill(~eligible, -torch.inf).topk(5, dim=1).values[:, -1]
+        return ((fifth - positive) / PAIR_TEMPERATURE).relu().mean()

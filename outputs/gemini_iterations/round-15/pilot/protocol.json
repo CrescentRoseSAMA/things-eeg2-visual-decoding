@@ -1,0 +1,39 @@
+{
+  "candidate": "round06_top5_margin_qb",
+  "baseline": "round06_qb_norm",
+  "split_seed": 2026,
+  "pairs": [
+    [
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ]
+  ],
+  "model": "ab_pool4_resproj_cosine",
+  "epochs": 100,
+  "batch_size": 128,
+  "lr": 0.0002,
+  "auxiliary_loss": "relu((fifth highest incorrect cosine - correct cosine) / 0.07)",
+  "top5_rank_weight": 0.1,
+  "gallery_size": 200,
+  "templates": "unit-normalized class means of fixed training image features; positive excludes paired image",
+  "gallery": "200 drawn training classes per batch; each query uses first 199 draws excluding its class",
+  "gallery_rng": "independent torch generator, reseeded with seed * 2**32 + epoch",
+  "qb_beta": 20,
+  "qb_k": 1,
+  "calibration": "standard four-repeat dev_train EEG, within subject",
+  "gate": "vs round 06 QB-Norm: Top-5 >= +1pp, Top-1 >= 0pp, at least 3/4 improve Top-5",
+  "new_fits": 4,
+  "official_test_used": false
+}
